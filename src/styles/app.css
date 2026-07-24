@@ -3411,3 +3411,259 @@ textarea {
   border-color: var(--danger);
   color: var(--danger);
 }
+
+/* ── Rückblick ────────────────────────────────────────────────────────────
+   Der Farbstreifen benutzt dieselbe Tagesfarben-Formel wie das Orakel, auch
+   für leere Tage — die Lücken sind die halbe Aussage. */
+.review-panel {
+  display: grid;
+  gap: 20px;
+  align-content: start;
+  overflow-y: auto;
+  padding-bottom: 12px;
+}
+
+.review-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.review-stats article {
+  display: grid;
+  flex: 1 1 120px;
+  gap: 2px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+
+.review-stats article > svg {
+  color: var(--copper);
+}
+
+.review-stats strong {
+  font-family: var(--font-mono);
+  font-size: 1.55rem;
+  line-height: 1.1;
+}
+
+.review-stats small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.review-export {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  align-self: stretch;
+  padding: 0 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color var(--ease-snap), background var(--ease-snap);
+}
+
+.review-export:hover {
+  border-color: var(--violet);
+  background: rgb(155 77 255 / 12%);
+}
+
+.review-month header {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.review-month header h3 {
+  min-width: 9ch;
+  margin: 0;
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+}
+
+.review-month header button {
+  display: inline-flex;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.review-month header button:hover {
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+
+.review-month__count {
+  margin-left: auto;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+}
+
+.color-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.color-cell {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  /* Die Tagesfarbe gedämpft als Fläche: bei voller Sättigung überstrahlt ein
+     Streifen aus 31 xkcd-Farben die gesamte Oberfläche. */
+  border: 1px solid rgb(244 240 221 / 12%);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(rgb(6 7 11 / 45%), rgb(6 7 11 / 45%)),
+    var(--cell, var(--panel-solid));
+  cursor: pointer;
+  transition: transform var(--ease-snap), border-color var(--ease-snap), filter var(--ease-snap);
+}
+
+.color-cell:hover {
+  z-index: 1;
+  border-color: var(--line-strong);
+  transform: scale(1.08);
+}
+
+.color-cell.has-note {
+  border-color: rgb(244 240 221 / 62%);
+  background:
+    linear-gradient(rgb(6 7 11 / 12%), rgb(6 7 11 / 12%)),
+    var(--cell, var(--panel-solid));
+}
+
+.color-cell.is-selected {
+  border-color: var(--violet);
+  box-shadow: 0 0 0 2px rgb(155 77 255 / 45%);
+}
+
+.color-cell__day {
+  position: absolute;
+  top: 3px;
+  left: 5px;
+  color: rgb(255 255 255 / 78%);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 85%);
+}
+
+.color-cell__mood {
+  position: absolute;
+  right: 3px;
+  bottom: 2px;
+  font-size: 0.72rem;
+}
+
+.review-legend {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.review-search__field {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+
+.review-search__field > svg {
+  flex: none;
+  color: var(--muted);
+}
+
+.review-search__field input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  outline: none;
+}
+
+.review-search__count {
+  margin: 9px 0 0;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.review-hits {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.review-hits button {
+  display: grid;
+  width: 100%;
+  gap: 3px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.review-hits button:hover {
+  border-color: var(--day-accent);
+}
+
+.review-hit__meta {
+  display: flex;
+  gap: 9px;
+  align-items: baseline;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
+.review-hit__meta small {
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.review-hit__text {
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 640px) {
+  .review-export {
+    flex: 1 1 100%;
+    justify-content: center;
+    padding: 11px;
+  }
+
+  .color-strip {
+    grid-template-columns: repeat(7, 1fr);
+  }
+}

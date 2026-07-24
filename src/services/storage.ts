@@ -1,4 +1,11 @@
-import type { HourLog, JournalEntry, MoodEntry, Profile, UserSettings } from "../types";
+import type {
+  AllProfileData,
+  HourLog,
+  JournalEntry,
+  MoodEntry,
+  Profile,
+  UserSettings
+} from "../types";
 import { allKeys, readKey, removeKey, writeKey } from "./safeStorage";
 
 /**
@@ -274,10 +281,12 @@ interface ExportPayload {
 }
 
 /**
- * Serializes settings plus all journal and mood entries as JSON. The OpenAI
- * key is deliberately EXCLUDED — it never leaves this device.
+ * Ein einziger Durchlauf durch den Speicher. Sowohl der Export als auch die
+ * Rueckblick-Ansicht brauchen denselben Gesamtbestand; zweimal getrennt zu
+ * iterieren waere nicht nur langsamer, sondern liefe auch auseinander,
+ * sobald sich ein Schluesselschema aendert.
  */
-export function exportAllData(): string {
+export function loadAllProfileData(): AllProfileData {
   const journal: Record<string, JournalEntry> = {};
   const moods: Record<string, MoodEntry> = {};
   const hours: Record<string, HourLog> = {};
@@ -299,9 +308,18 @@ export function exportAllData(): string {
         if (Object.keys(log).length > 0) hours[dayKey] = log;
       }
     } catch {
-      // skip corrupted rows
+      // beschaedigte Zeilen ueberspringen
     }
   }
+  return { journal, moods, hours };
+}
+
+/**
+ * Serializes settings plus all journal and mood entries as JSON. The OpenAI
+ * key is deliberately EXCLUDED — it never leaves this device.
+ */
+export function exportAllData(): string {
+  const { journal, moods, hours } = loadAllProfileData();
   const payload: ExportPayload = {
     app: "soul-dream-calendar",
     version: 1,

@@ -2,6 +2,7 @@ import {
   CalendarDays,
   CircleUserRound,
   CircuitBoard,
+  History,
   NotebookPen,
   Settings,
   Sparkles
@@ -13,6 +14,7 @@ import { HourLogger } from "./components/HourLogger";
 import { JournalPanel } from "./components/JournalPanel";
 import { Onboarding } from "./components/Onboarding";
 import { OracleCards } from "./components/OracleCards";
+import { ReviewPanel } from "./components/ReviewPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { ShareDayButton } from "./components/ShareDayButton";
 import { SoulDetail } from "./components/SoulDetail";
@@ -48,6 +50,7 @@ const navItems: Array<{ id: AppView; label: string; icon: typeof CalendarDays }>
   { id: "calendar", label: "Kalender", icon: CalendarDays },
   { id: "oracle", label: "Tagesorakel", icon: Sparkles },
   { id: "journal", label: "Notizen", icon: NotebookPen },
+  { id: "review", label: "Rueckblick", icon: History },
   { id: "settings", label: "Einstellungen", icon: Settings }
 ];
 
@@ -220,6 +223,20 @@ export default function App() {
             onPinnedChange={(angelPinned) => updateSettings({ ...settings, angelPinned })}
           />
         </div>
+      );
+    }
+
+    if (view === "review") {
+      return (
+        <ReviewPanel
+          profileId={profileId}
+          selectedIso={selectedIso}
+          profileName={settings.name}
+          onSelectDay={(iso) => {
+            setSelectedIso(iso);
+            setView("oracle");
+          }}
+        />
       );
     }
 

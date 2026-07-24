@@ -189,6 +189,13 @@ export interface BirthPlace {
   timezone: string;
 }
 
+/** Alles, was im aktiven Profil gespeichert ist - nach ISO-Tag geordnet. */
+export interface AllProfileData {
+  journal: Record<string, JournalEntry>;
+  moods: Record<string, MoodEntry>;
+  hours: Record<string, HourLog>;
+}
+
 /**
  * Ein Profil auf diesem Geraet. Trennt Journal, Stimmungen, Stunden und
  * Einstellungen mehrerer Menschen; der OpenAI-Schluessel bleibt geraeteweit.
