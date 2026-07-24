@@ -17,8 +17,10 @@ export type SpeechSource =
 export interface AngelAsset {
   id: string;
   name: string;
-  fullSrc: string;
-  mobileSrc: string;
+  /** Animiertes WebP (~1,6 MB). Wird erst nach dem ersten Paint nachgeladen. */
+  animatedSrc: string;
+  /** Standbild (~80 KB). Sofort sichtbar, und die einzige Variante bei
+   *  reduzierter Bewegung. */
   posterSrc: string;
   mood: AngelMood;
 }

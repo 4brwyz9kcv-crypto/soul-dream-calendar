@@ -23,7 +23,41 @@ export function AngelCompanion({
 }: AngelCompanionProps) {
   const [lineIndex, setLineIndex] = useState(0);
   const line = lines[lineIndex % Math.max(lines.length, 1)];
-  const imageSrc = reduceMotion ? asset.posterSrc : asset.mobileSrc;
+
+  // Das Poster (~80 KB) ist sofort da, die Animation (~1,6 MB) kommt erst,
+  // wenn der Browser ohnehin Luft hat. Vorher blockierte die Animation den
+  // Rest der Seite um Sekunden - im Mobilfunknetz um viele.
+  const [animatedReady, setAnimatedReady] = useState(false);
+
+  useEffect(() => {
+    setAnimatedReady(false);
+    // Bei reduzierter Bewegung wird die Animation gar nicht erst geholt:
+    // sie wuerde nie gezeigt, waere also reines Datenvolumen.
+    if (reduceMotion) return;
+
+    let cancelled = false;
+    const load = () => {
+      const image = new Image();
+      image.onload = () => {
+        if (!cancelled) setAnimatedReady(true);
+      };
+      image.src = asset.animatedSrc;
+    };
+
+    // requestIdleCallback fehlt in Safari; dort tut ein kurzer Timer dasselbe.
+    const idle = "requestIdleCallback" in window;
+    const handle = idle
+      ? window.requestIdleCallback(load, { timeout: 3000 })
+      : window.setTimeout(load, 1200);
+
+    return () => {
+      cancelled = true;
+      if (idle) window.cancelIdleCallback(handle);
+      else window.clearTimeout(handle);
+    };
+  }, [asset.animatedSrc, reduceMotion]);
+
+  const imageSrc = animatedReady ? asset.animatedSrc : asset.posterSrc;
 
   useEffect(() => {
     setLineIndex(0);
@@ -46,7 +80,15 @@ export function AngelCompanion({
   return (
     <aside className={`angel-companion ${pinned ? "is-pinned" : ""}`} aria-label="PCB Engel Begleiter">
       <div className="angel-frame">
-        <img src={imageSrc} alt={`${asset.name} animierter PCB Engel`} loading="lazy" />
+        <img
+          src={imageSrc}
+          alt={`${asset.name} — PCB-Engel`}
+          width={384}
+          height={384}
+          // Nicht lazy: der Engel ist bei beiden Ansichten sofort im Bild, und
+          // die 80 KB des Posters sind billiger als ein nachtraeglicher Umbruch.
+          decoding="async"
+        />
       </div>
 
       <div className="speech-bubble" aria-live="polite">
