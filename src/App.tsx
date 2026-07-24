@@ -6,11 +6,12 @@ import {
   Settings,
   Sparkles
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { AngelCompanion } from "./components/AngelCompanion";
 import { CalendarGrid } from "./components/CalendarGrid";
 import { HourLogger } from "./components/HourLogger";
 import { JournalPanel } from "./components/JournalPanel";
+import { Onboarding } from "./components/Onboarding";
 import { OracleCards } from "./components/OracleCards";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { ShareDayButton } from "./components/ShareDayButton";
@@ -26,6 +27,7 @@ import { getDayOracle } from "./services/oracle";
 import { onRouteChange, readRoute, writeRoute } from "./services/router";
 import {
   exportAllData,
+  getActiveProfileId,
   loadJournalEntry,
   loadMoodEntry,
   loadSettings,
@@ -56,6 +58,10 @@ export default function App() {
   // heute zurueckspringt.
   const [view, setView] = useState<AppView>(() => readRoute(todayIso).view);
   const [selectedIso, setSelectedIso] = useState(() => readRoute(todayIso).iso);
+  // Das aktive Profil bestimmt, welche Daten geladen werden. Es steckt in
+  // jedem Speicher-Schluessel unten, damit ein Profilwechsel Journal, Stimmung
+  // und Stundenlog genauso zuverlaessig neu laedt wie ein Tageswechsel.
+  const [profileId, setProfileId] = useState(getActiveProfileId);
   const [settings, setSettings] = useState<UserSettings>(() => loadSettings());
   const [journalEntry, setJournalEntry] = useState<JournalEntry>(() => loadJournalEntry(todayIso));
   const [moodEntry, setMoodEntry] = useState<MoodEntry | null>(() => loadMoodEntry(todayIso));
@@ -88,12 +94,20 @@ export default function App() {
   // rendert React einmal mit neuem Datum aber noch altem Eintrag, und der
   // Speicher-Hook haelt den danach nachgereichten Eintrag faelschlich fuer
   // eine Nutzereingabe - was jeden bloss angesehenen Tag angelegt haette.
-  const [loadedIso, setLoadedIso] = useState(selectedIso);
-  if (loadedIso !== selectedIso) {
-    setLoadedIso(selectedIso);
+  const stateKey = `${profileId}:${selectedIso}`;
+  const [loadedKey, setLoadedKey] = useState(stateKey);
+  if (loadedKey !== stateKey) {
+    setLoadedKey(stateKey);
     setJournalEntry(loadJournalEntry(selectedIso));
     setMoodEntry(loadMoodEntry(selectedIso));
   }
+
+  /** Nach Wechsel/Anlegen/Loeschen eines Profils den gesamten Zustand neu ziehen. */
+  const reloadProfile = () => {
+    const next = getActiveProfileId();
+    setProfileId(next);
+    setSettings(loadSettings());
+  };
 
   // Zustand -> Adresszeile. Der allererste Abgleich ersetzt den History-Eintrag,
   // damit "Zurueck" direkt nach dem Start nicht ins Leere zeigt; jeder weitere
@@ -118,11 +132,27 @@ export default function App() {
   // jedem einzelnen Tastendruck im Namensfeld und im Journal. Gebuendelt wird
   // pro Tippgeraeusch nur noch einmal geschrieben, beim Tageswechsel und beim
   // Schliessen des Tabs sofort (siehe useDebouncedPersist).
-  useDebouncedPersist("settings", settings, saveSettings);
-  useDebouncedPersist(selectedIso, journalEntry, saveJournalEntry);
-  useDebouncedPersist(selectedIso, moodEntry, (entry) => {
-    if (entry) saveMoodEntry(entry);
-  });
+  // Das Profil ist fest an die Schreibfunktion gebunden, nicht erst beim
+  // Ausfuehren nachgeschlagen - sonst landete ein Eintrag, der einen
+  // Profilwechsel um Millisekunden verpasst, im falschen Journal.
+  const persistSettings = useCallback(
+    (next: UserSettings) => saveSettings(next, profileId),
+    [profileId]
+  );
+  const persistJournal = useCallback(
+    (entry: JournalEntry) => saveJournalEntry(entry, profileId),
+    [profileId]
+  );
+  const persistMood = useCallback(
+    (entry: MoodEntry | null) => {
+      if (entry) saveMoodEntry(entry, profileId);
+    },
+    [profileId]
+  );
+
+  useDebouncedPersist(`settings:${profileId}`, settings, persistSettings);
+  useDebouncedPersist(stateKey, journalEntry, persistJournal);
+  useDebouncedPersist(stateKey, moodEntry, persistMood);
 
   // Live day data (PokeAPI, Wikipedia, Numbers API) — null while loading,
   // every field degrades to the deterministic offline fallback on its own.
@@ -194,7 +224,13 @@ export default function App() {
     }
 
     if (view === "settings") {
-      return <SettingsPanel settings={settings} onSettingsChange={updateSettings} />;
+      return (
+        <SettingsPanel
+          settings={settings}
+          onSettingsChange={updateSettings}
+          onProfileChange={reloadProfile}
+        />
+      );
     }
 
     if (view === "oracle") {
@@ -263,7 +299,7 @@ export default function App() {
             </div>
           </header>
           <div className="soul-detail-layout">
-            <HourLogger dayKey={selectedIso} isToday={selectedIso === todayIso} />
+            <HourLogger dayKey={selectedIso} isToday={selectedIso === todayIso} profileId={profileId} />
             <div className="soul-center">
               <OracleCards oracle={oracle} dreamImage={dreamImage} />
             </div>
@@ -336,6 +372,26 @@ export default function App() {
       </div>
     );
   };
+
+  // Erster Start: der Willkommensdialog liegt ueber der App, statt sie zu
+  // ersetzen - der Kalender schimmert durch und zeigt schon, worum es geht.
+  if (!settings.onboarded) {
+    return (
+      <div className="app-shell is-onboarding" data-reduce-motion={settings.reduceMotion ? "true" : undefined}>
+        <div className="circuit-bg" aria-hidden="true" />
+        <Onboarding
+          settings={settings}
+          onChange={setSettings}
+          onDone={(next) => {
+            setSettings(next);
+            // Sofort schreiben statt auf die Verzoegerung zu warten: schliesst
+            // der Nutzer den Tab direkt danach, darf der Dialog nicht wiederkommen.
+            saveSettings(next, profileId);
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="app-shell" data-reduce-motion={settings.reduceMotion ? "true" : undefined}>

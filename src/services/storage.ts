@@ -1,11 +1,111 @@
-import type { HourLog, JournalEntry, MoodEntry, UserSettings } from "../types";
+import type { HourLog, JournalEntry, MoodEntry, Profile, UserSettings } from "../types";
 import { allKeys, readKey, removeKey, writeKey } from "./safeStorage";
 
-const SETTINGS_KEY = "sdc.settings";
-const JOURNAL_PREFIX = "sdc.journal.";
-const MOOD_PREFIX = "sdc.mood.";
-const HOURS_PREFIX = "sdc.hours.";
+/**
+ * Profile trennen mehrere Menschen auf einem Geraet.
+ *
+ * Das Standardprofil benutzt bewusst weiterhin die urspruenglichen
+ * Schluesselnamen (`sdc.journal.2026-07-25`). Jede bestehende Installation
+ * behaelt damit ihre Daten, ohne dass eine Migration laufen muesste; nur
+ * zusaetzlich angelegte Profile bekommen ein Praefix (`sdc.p.{id}.journal.…`).
+ */
+export const DEFAULT_PROFILE_ID = "default";
+
+const PROFILES_KEY = "sdc.profiles";
+const ACTIVE_PROFILE_KEY = "sdc.profile.active";
+
+const SETTINGS_SUFFIX = "settings";
+const JOURNAL_SUFFIX = "journal.";
+const MOOD_SUFFIX = "mood.";
+const HOURS_SUFFIX = "hours.";
+
+/** Der OpenAI-Schluessel gilt fuer das Geraet, nicht pro Profil. */
 const OPENAI_KEY = "sdc.openai.key";
+
+function scoped(suffix: string, profileId = getActiveProfileId()): string {
+  return profileId === DEFAULT_PROFILE_ID ? `sdc.${suffix}` : `sdc.p.${profileId}.${suffix}`;
+}
+
+const SETTINGS_KEY = () => scoped(SETTINGS_SUFFIX);
+const JOURNAL_PREFIX = () => scoped(JOURNAL_SUFFIX);
+const MOOD_PREFIX = () => scoped(MOOD_SUFFIX);
+const HOURS_PREFIX = () => scoped(HOURS_SUFFIX);
+
+export const defaultProfile: Profile = {
+  id: DEFAULT_PROFILE_ID,
+  name: "Ich",
+  createdAt: new Date(0).toISOString()
+};
+
+export function listProfiles(): Profile[] {
+  const raw = readKey(PROFILES_KEY);
+  if (!raw) return [defaultProfile];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [defaultProfile];
+    const profiles = parsed.filter(
+      (entry): entry is Profile =>
+        typeof entry === "object" &&
+        entry !== null &&
+        typeof (entry as Profile).id === "string" &&
+        typeof (entry as Profile).name === "string"
+    );
+    // Das Standardprofil ist nicht loeschbar und muss immer dabei sein.
+    return profiles.some((profile) => profile.id === DEFAULT_PROFILE_ID)
+      ? profiles
+      : [defaultProfile, ...profiles];
+  } catch {
+    return [defaultProfile];
+  }
+}
+
+export function getActiveProfileId(): string {
+  const stored = readKey(ACTIVE_PROFILE_KEY);
+  if (!stored) return DEFAULT_PROFILE_ID;
+  // Ein Profil, das nicht mehr existiert (geloescht, Import von woanders),
+  // darf nicht in einen leeren Zustand fuehren.
+  return listProfiles().some((profile) => profile.id === stored) ? stored : DEFAULT_PROFILE_ID;
+}
+
+export function setActiveProfileId(profileId: string): void {
+  writeKey(ACTIVE_PROFILE_KEY, profileId);
+}
+
+/** Legt ein Profil an und liefert es zurueck. Der Name muss nicht eindeutig sein. */
+export function createProfile(name: string): Profile {
+  const profile: Profile = {
+    // crypto.randomUUID gibt es in jedem Browser, der auch React 19 traegt.
+    id: crypto.randomUUID().slice(0, 8),
+    name: name.trim() || "Ohne Namen",
+    createdAt: new Date().toISOString()
+  };
+  writeKey(PROFILES_KEY, JSON.stringify([...listProfiles(), profile]));
+  return profile;
+}
+
+export function renameProfile(profileId: string, name: string): void {
+  const profiles = listProfiles().map((profile) =>
+    profile.id === profileId ? { ...profile, name: name.trim() || profile.name } : profile
+  );
+  writeKey(PROFILES_KEY, JSON.stringify(profiles));
+}
+
+/**
+ * Loescht ein Profil samt aller zugehoerigen Eintraege. Das Standardprofil
+ * bleibt bestehen - es ist der Ruecksprungpunkt, wenn das aktive weg ist.
+ */
+export function deleteProfile(profileId: string): boolean {
+  if (profileId === DEFAULT_PROFILE_ID) return false;
+  const remaining = listProfiles().filter((profile) => profile.id !== profileId);
+  writeKey(PROFILES_KEY, JSON.stringify(remaining));
+
+  const prefix = `sdc.p.${profileId}.`;
+  for (const key of allKeys()) {
+    if (key.startsWith(prefix)) removeKey(key);
+  }
+  if (getActiveProfileId() === profileId) setActiveProfileId(DEFAULT_PROFILE_ID);
+  return true;
+}
 
 export const defaultSettings: UserSettings = {
   // Leer statt eines erfundenen Namens: der Onboarding-Dialog fragt beim
@@ -30,15 +130,20 @@ function safeParse<T>(value: string | null, fallback: T): T {
 }
 
 export function loadSettings(): UserSettings {
-  return safeParse<UserSettings>(readKey(SETTINGS_KEY), defaultSettings);
+  return safeParse<UserSettings>(readKey(SETTINGS_KEY()), defaultSettings);
 }
 
-export function saveSettings(settings: UserSettings): void {
-  writeKey(SETTINGS_KEY, JSON.stringify(settings));
+/**
+ * `profileId` explizit angeben, wenn der Schreibvorgang zu einem Profil gehoert,
+ * das inzwischen nicht mehr das aktive ist - etwa ein verzoegerter Schreibvorgang,
+ * der einen Profilwechsel ueberlebt hat.
+ */
+export function saveSettings(settings: UserSettings, profileId?: string): void {
+  writeKey(scoped(SETTINGS_SUFFIX, profileId ?? getActiveProfileId()), JSON.stringify(settings));
 }
 
 export function loadJournalEntry(dayKey: string): JournalEntry {
-  return safeParse<JournalEntry>(readKey(JOURNAL_PREFIX + dayKey), {
+  return safeParse<JournalEntry>(readKey(JOURNAL_PREFIX() + dayKey), {
     dayKey,
     note: "",
     promptResponses: {},
@@ -46,15 +151,15 @@ export function loadJournalEntry(dayKey: string): JournalEntry {
   });
 }
 
-export function saveJournalEntry(entry: JournalEntry): void {
+export function saveJournalEntry(entry: JournalEntry, profileId?: string): void {
   writeKey(
-    JOURNAL_PREFIX + entry.dayKey,
+    scoped(JOURNAL_SUFFIX, profileId ?? getActiveProfileId()) + entry.dayKey,
     JSON.stringify({ ...entry, updatedAt: new Date().toISOString() })
   );
 }
 
 export function loadMoodEntry(dayKey: string): MoodEntry | null {
-  const value = readKey(MOOD_PREFIX + dayKey);
+  const value = readKey(MOOD_PREFIX() + dayKey);
   if (!value) return null;
   try {
     return JSON.parse(value) as MoodEntry;
@@ -63,9 +168,9 @@ export function loadMoodEntry(dayKey: string): MoodEntry | null {
   }
 }
 
-export function saveMoodEntry(entry: MoodEntry): void {
+export function saveMoodEntry(entry: MoodEntry, profileId?: string): void {
   writeKey(
-    MOOD_PREFIX + entry.dayKey,
+    scoped(MOOD_SUFFIX, profileId ?? getActiveProfileId()) + entry.dayKey,
     JSON.stringify({ ...entry, updatedAt: new Date().toISOString() })
   );
 }
@@ -94,15 +199,18 @@ export function clearOpenAiKey(): void {
  */
 export function listJournalDayKeys(): string[] {
   const keys: string[] = [];
+  // Einmal aufloesen statt pro Schluessel: das Praefix haengt am aktiven
+  // Profil, dessen Ermittlung selbst wieder localStorage liest.
+  const prefix = JOURNAL_PREFIX();
   for (const storageKey of allKeys()) {
-    if (!storageKey.startsWith(JOURNAL_PREFIX)) continue;
+    if (!storageKey.startsWith(prefix)) continue;
     try {
       const entry = JSON.parse(readKey(storageKey) ?? "") as Partial<JournalEntry>;
       const hasNote = typeof entry.note === "string" && entry.note.trim().length > 0;
       const hasPrompts =
         !!entry.promptResponses &&
         Object.values(entry.promptResponses).some((value) => typeof value === "string" && value.trim().length > 0);
-      if (hasNote || hasPrompts) keys.push(storageKey.slice(JOURNAL_PREFIX.length));
+      if (hasNote || hasPrompts) keys.push(storageKey.slice(prefix.length));
     } catch {
       // ignore unreadable entries
     }
@@ -116,7 +224,7 @@ export function listJournalDayKeys(): string[] {
  * corrupted row degrades to an empty log instead of throwing.
  */
 export function loadHourLog(dayKey: string): HourLog {
-  const raw = readKey(HOURS_PREFIX + dayKey);
+  const raw = readKey(HOURS_PREFIX() + dayKey);
   if (!raw) return {};
   try {
     const parsed: unknown = JSON.parse(raw);
@@ -139,7 +247,7 @@ export function loadHourLog(dayKey: string): HourLog {
  * Empty/whitespace-only hours are compacted away; a fully empty log removes
  * the key entirely so localStorage never accumulates blank days.
  */
-export function saveHourLog(dayKey: string, hours: HourLog): void {
+export function saveHourLog(dayKey: string, hours: HourLog, profileId?: string): void {
   const compact: HourLog = {};
   for (const [key, value] of Object.entries(hours)) {
     const hour = Number(key);
@@ -147,11 +255,12 @@ export function saveHourLog(dayKey: string, hours: HourLog): void {
       compact[hour] = value;
     }
   }
+  const key = scoped(HOURS_SUFFIX, profileId ?? getActiveProfileId()) + dayKey;
   if (Object.keys(compact).length === 0) {
-    removeKey(HOURS_PREFIX + dayKey);
+    removeKey(key);
     return;
   }
-  writeKey(HOURS_PREFIX + dayKey, JSON.stringify(compact));
+  writeKey(key, JSON.stringify(compact));
 }
 
 interface ExportPayload {
@@ -172,16 +281,20 @@ export function exportAllData(): string {
   const journal: Record<string, JournalEntry> = {};
   const moods: Record<string, MoodEntry> = {};
   const hours: Record<string, HourLog> = {};
+  // Praefixe einmal aufloesen - sie haengen am aktiven Profil.
+  const journalPrefix = JOURNAL_PREFIX();
+  const moodPrefix = MOOD_PREFIX();
+  const hoursPrefix = HOURS_PREFIX();
   for (const storageKey of allKeys()) {
     const raw = readKey(storageKey);
     if (!raw) continue;
     try {
-      if (storageKey.startsWith(JOURNAL_PREFIX)) {
-        journal[storageKey.slice(JOURNAL_PREFIX.length)] = JSON.parse(raw) as JournalEntry;
-      } else if (storageKey.startsWith(MOOD_PREFIX)) {
-        moods[storageKey.slice(MOOD_PREFIX.length)] = JSON.parse(raw) as MoodEntry;
-      } else if (storageKey.startsWith(HOURS_PREFIX)) {
-        const dayKey = storageKey.slice(HOURS_PREFIX.length);
+      if (storageKey.startsWith(journalPrefix)) {
+        journal[storageKey.slice(journalPrefix.length)] = JSON.parse(raw) as JournalEntry;
+      } else if (storageKey.startsWith(moodPrefix)) {
+        moods[storageKey.slice(moodPrefix.length)] = JSON.parse(raw) as MoodEntry;
+      } else if (storageKey.startsWith(hoursPrefix)) {
+        const dayKey = storageKey.slice(hoursPrefix.length);
         const log = loadHourLog(dayKey);
         if (Object.keys(log).length > 0) hours[dayKey] = log;
       }
@@ -230,11 +343,11 @@ export function importAllData(json: string): boolean {
   saveSettings({ ...defaultSettings, ...(parsed.settings as Partial<UserSettings>) });
   for (const [dayKey, entry] of Object.entries(journal)) {
     if (!isRecord(entry)) continue;
-    writeKey(JOURNAL_PREFIX + dayKey, JSON.stringify({ ...entry, dayKey }));
+    writeKey(JOURNAL_PREFIX() + dayKey, JSON.stringify({ ...entry, dayKey }));
   }
   for (const [dayKey, entry] of Object.entries(moods)) {
     if (!isRecord(entry)) continue;
-    writeKey(MOOD_PREFIX + dayKey, JSON.stringify({ ...entry, dayKey }));
+    writeKey(MOOD_PREFIX() + dayKey, JSON.stringify({ ...entry, dayKey }));
   }
   for (const [dayKey, entry] of Object.entries(hours)) {
     if (!isRecord(entry)) continue;

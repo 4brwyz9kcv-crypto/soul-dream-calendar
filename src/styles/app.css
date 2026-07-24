@@ -3177,3 +3177,237 @@ textarea {
   font-family: var(--font-mono);
   font-size: 0.7rem;
 }
+
+/* ── Erster Start ─────────────────────────────────────────────────────────
+   Liegt über dem Circuit-Hintergrund, damit die Ästhetik der App vom
+   ersten Moment an da ist statt eines neutralen Formulars. */
+.app-shell.is-onboarding {
+  display: grid;
+  place-items: center;
+  grid-template-columns: 1fr;
+  padding: 20px;
+}
+
+.onboarding {
+  z-index: 2;
+  width: min(560px, 100%);
+}
+
+.onboarding-card {
+  display: grid;
+  gap: 18px;
+  padding: 26px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel-solid);
+  box-shadow: 0 0 60px rgb(155 77 255 / 14%);
+}
+
+.onboarding-card > header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.onboarding-card > header > svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--violet);
+}
+
+.onboarding-card header span {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.22em;
+}
+
+.onboarding-card h1 {
+  margin: 2px 0 0;
+  font-size: 1.28rem;
+  line-height: 1.3;
+}
+
+.onboarding-body {
+  display: grid;
+  gap: 14px;
+}
+
+.onboarding-body > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.onboarding-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.onboarding-privacy {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgb(136 255 102 / 6%);
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.onboarding-privacy > svg {
+  flex: none;
+  color: var(--green);
+}
+
+.onboarding-card > footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.onboarding-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.onboarding-dots span {
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  transition: background var(--ease-snap);
+}
+
+.onboarding-dots span.is-active {
+  border-color: var(--violet);
+  background: var(--violet);
+}
+
+.onboarding-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.onboarding-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 15px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  transition: background var(--ease-snap), border-color var(--ease-snap);
+}
+
+.onboarding-actions button.is-ghost {
+  border-color: transparent;
+  color: var(--muted);
+}
+
+.onboarding-actions button.is-ghost:hover {
+  color: var(--text);
+}
+
+.onboarding-actions button.is-primary {
+  border-color: var(--violet);
+  background: rgb(155 77 255 / 20%);
+}
+
+.onboarding-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+@media (max-width: 520px) {
+  .onboarding-pair {
+    grid-template-columns: 1fr;
+  }
+
+  .onboarding-card > footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .onboarding-actions button {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+/* ── Profile ──────────────────────────────────────────────────────────── */
+.profile-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.profile-list li {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.profile-pick {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color var(--ease-snap), background var(--ease-snap);
+}
+
+.profile-pick:hover {
+  border-color: var(--line-strong);
+}
+
+.profile-list li.is-active .profile-pick {
+  border-color: var(--violet);
+  background: rgb(155 77 255 / 12%);
+}
+
+.profile-pick small {
+  margin-left: auto;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.profile-delete {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.78rem;
+  transition: color var(--ease-snap), border-color var(--ease-snap);
+}
+
+.profile-delete:hover,
+.profile-delete.is-armed {
+  border-color: var(--danger);
+  color: var(--danger);
+}

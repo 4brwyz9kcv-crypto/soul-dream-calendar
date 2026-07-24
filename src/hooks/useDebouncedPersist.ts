@@ -19,10 +19,11 @@ export function useDebouncedPersist<T>(
   persist: (value: T) => void,
   delayMs = 500
 ): void {
-  const persistRef = useRef(persist);
-  persistRef.current = persist;
-
-  const pending = useRef<{ value: T } | null>(null);
+  // Die Schreibfunktion wird ZUSAMMEN mit dem Wert gemerkt, nicht erst beim
+  // Ausfuehren nachgeschlagen. Sonst schriebe ein beim Profilwechsel noch
+  // ausstehender Journaleintrag in das gerade aktivierte Profil - fremde
+  // Daten im fremden Journal.
+  const pending = useRef<{ value: T; persist: (value: T) => void } | null>(null);
   const timer = useRef<number | null>(null);
   const baselineKey = useRef<string | null>(null);
 
@@ -34,9 +35,9 @@ export function useDebouncedPersist<T>(
       timer.current = null;
     }
     if (pending.current) {
-      const { value: pendingValue } = pending.current;
+      const { value: pendingValue, persist: pendingPersist } = pending.current;
       pending.current = null;
-      persistRef.current(pendingValue);
+      pendingPersist(pendingValue);
     }
   }).current;
 
@@ -46,10 +47,10 @@ export function useDebouncedPersist<T>(
       baselineKey.current = key;
       return;
     }
-    pending.current = { value };
+    pending.current = { value, persist };
     if (timer.current !== null) window.clearTimeout(timer.current);
     timer.current = window.setTimeout(flush, delayMs);
-  }, [key, value, delayMs, flush]);
+  }, [key, value, delayMs, flush, persist]);
 
   useEffect(() => {
     // Tab schliessen, App wegwischen, Handy sperren: pagehide feuert dabei

@@ -17,9 +17,11 @@ const allHours = Array.from({ length: 24 }, (_, hour) => hour);
 interface HourLoggerProps {
   dayKey: string;
   isToday: boolean;
+  /** Aktives Profil - Teil des Speicherschluessels und des Neulade-Signals. */
+  profileId: string;
 }
 
-export function HourLogger({ dayKey, isToday }: HourLoggerProps) {
+export function HourLogger({ dayKey, isToday, profileId }: HourLoggerProps) {
   const [hours, setHours] = useState<HourLog>(() => loadHourLog(dayKey));
   const [mobileOpen, setMobileOpen] = useState(false);
   const [currentHour, setCurrentHour] = useState(() => new Date().getHours());
@@ -27,14 +29,18 @@ export function HourLogger({ dayKey, isToday }: HourLoggerProps) {
 
   // Tageswechsel waehrend des Renderns nachziehen (siehe App.tsx): so passen
   // Tag und Inhalt schon zusammen, bevor der Speicher-Hook laeuft.
-  const [loadedDay, setLoadedDay] = useState(dayKey);
-  if (loadedDay !== dayKey) {
-    setLoadedDay(dayKey);
+  const stateKey = `${profileId}:${dayKey}`;
+  const [loadedKey, setLoadedKey] = useState(stateKey);
+  if (loadedKey !== stateKey) {
+    setLoadedKey(stateKey);
     setHours(loadHourLog(dayKey));
   }
 
-  const persistHours = useCallback((next: HourLog) => saveHourLog(dayKey, next), [dayKey]);
-  useDebouncedPersist(dayKey, hours, persistHours);
+  const persistHours = useCallback(
+    (next: HourLog) => saveHourLog(dayKey, next, profileId),
+    [dayKey, profileId]
+  );
+  useDebouncedPersist(stateKey, hours, persistHours);
 
   // Desktop console rail: center the current hour in the internal scroller on
   // mount / day switch (today only). Sets scrollTop directly instead of

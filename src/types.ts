@@ -187,6 +187,16 @@ export interface BirthPlace {
   timezone: string;
 }
 
+/**
+ * Ein Profil auf diesem Geraet. Trennt Journal, Stimmungen, Stunden und
+ * Einstellungen mehrerer Menschen; der OpenAI-Schluessel bleibt geraeteweit.
+ */
+export interface Profile {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
 export interface UserSettings {
   name: string;
   providerMode: ProviderMode;
