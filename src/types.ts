@@ -1,6 +1,6 @@
 export type ProviderMode = "local" | "openai";
 
-export type AppView = "calendar" | "oracle" | "journal" | "settings";
+export type AppView = "calendar" | "oracle" | "journal" | "review" | "settings";
 
 export type AngelMood = "oracle" | "coach" | "glitch";
 

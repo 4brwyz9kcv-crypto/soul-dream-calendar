@@ -3135,3 +3135,45 @@ textarea {
     justify-content: center;
   }
 }
+
+/* ── Tag teilen ───────────────────────────────────────────────────────────
+   Sitzt in der Cogitator-Leiste neben der Live-Diode. Der Ersatz-Pfad
+   (sichtbares Adressfeld) erscheint nur, wenn weder System-Teilen noch
+   Zwischenablage erlaubt sind. */
+.share-day {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.share-day button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color var(--ease-snap), border-color var(--ease-snap);
+}
+
+.share-day button:hover {
+  border-color: var(--day-accent);
+  color: var(--text);
+}
+
+.share-day__manual {
+  width: 190px;
+  padding: 4px 8px;
+  border: 1px solid var(--day-accent);
+  border-radius: var(--radius);
+  background: rgb(0 0 0 / 45%);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+}

@@ -6,13 +6,14 @@ import {
   Settings,
   Sparkles
 } from "lucide-react";
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { AngelCompanion } from "./components/AngelCompanion";
 import { CalendarGrid } from "./components/CalendarGrid";
 import { HourLogger } from "./components/HourLogger";
 import { JournalPanel } from "./components/JournalPanel";
 import { OracleCards } from "./components/OracleCards";
 import { SettingsPanel } from "./components/SettingsPanel";
+import { ShareDayButton } from "./components/ShareDayButton";
 import { SoulDetail } from "./components/SoulDetail";
 import { StorageNotice } from "./components/StorageNotice";
 import { useDebouncedPersist } from "./hooks/useDebouncedPersist";
@@ -22,6 +23,7 @@ import { dreamImageDataUrl } from "./services/dreamImage";
 import { zodiacSign } from "./services/horoscope";
 import { loadLiveDayData } from "./services/live";
 import { getDayOracle } from "./services/oracle";
+import { onRouteChange, readRoute, writeRoute } from "./services/router";
 import {
   exportAllData,
   loadJournalEntry,
@@ -49,8 +51,11 @@ const navItems: Array<{ id: AppView; label: string; icon: typeof CalendarDays }>
 
 export default function App() {
   const todayIso = toDayKey(new Date()).iso;
-  const [view, setView] = useState<AppView>("calendar");
-  const [selectedIso, setSelectedIso] = useState(todayIso);
+  // Ansicht und Tag kommen aus der Adresszeile, damit ein geteilter Link
+  // wirklich dort landet, wo der Absender war - und ein Neuladen nicht auf
+  // heute zurueckspringt.
+  const [view, setView] = useState<AppView>(() => readRoute(todayIso).view);
+  const [selectedIso, setSelectedIso] = useState(() => readRoute(todayIso).iso);
   const [settings, setSettings] = useState<UserSettings>(() => loadSettings());
   const [journalEntry, setJournalEntry] = useState<JournalEntry>(() => loadJournalEntry(todayIso));
   const [moodEntry, setMoodEntry] = useState<MoodEntry | null>(() => loadMoodEntry(todayIso));
@@ -89,6 +94,25 @@ export default function App() {
     setJournalEntry(loadJournalEntry(selectedIso));
     setMoodEntry(loadMoodEntry(selectedIso));
   }
+
+  // Zustand -> Adresszeile. Der allererste Abgleich ersetzt den History-Eintrag,
+  // damit "Zurueck" direkt nach dem Start nicht ins Leere zeigt; jeder weitere
+  // Tageswechsel legt einen echten Eintrag an.
+  const routeSynced = useRef(false);
+  useEffect(() => {
+    writeRoute({ view, iso: selectedIso }, !routeSynced.current);
+    routeSynced.current = true;
+  }, [view, selectedIso]);
+
+  // Adresszeile -> Zustand, wenn der Nutzer die Browser-Pfeile benutzt.
+  useEffect(
+    () =>
+      onRouteChange((route) => {
+        setView(route.view);
+        setSelectedIso(route.iso);
+      }),
+    []
+  );
 
   // Alle drei liefen vorher ungebremst bei jeder Zustandsaenderung - also bei
   // jedem einzelnen Tastendruck im Namensfeld und im Journal. Gebuendelt wird
@@ -227,10 +251,15 @@ export default function App() {
               <strong className="cog-value">{angelAsset.name}</strong>
             </div>
             <div className="cog-cell cog-cell--status">
-              <span className={`live-badge is-${liveStatus}`} title={liveLabel}>
+              <span className={`live-badge is-${liveStatus}`}>
                 <span className="led-dot" aria-hidden="true" />
+                <span className="visually-hidden">{liveLabel}</span>
               </span>
               <span className="cog-status-text">{liveLabel}</span>
+              <ShareDayButton
+                route={{ view, iso: selectedIso }}
+                title={`${weekday}, ${oracle.title}`}
+              />
             </div>
           </header>
           <div className="soul-detail-layout">
