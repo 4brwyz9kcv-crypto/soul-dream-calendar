@@ -1,0 +1,2978 @@
+:root {
+  color-scheme: dark;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #06070b;
+  color: #f5f2ea;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  --bg: #06070b;
+  --panel: rgba(12, 17, 20, 0.82);
+  --panel-solid: #0d1115;
+  --line: rgba(244, 240, 221, 0.18);
+  --line-strong: rgba(244, 240, 221, 0.44);
+  --text: #f5f2ea;
+  --muted: #a6aaa7;
+  --violet: #9b4dff;
+  --green: #88ff66;
+  --copper: #d78b3d;
+  --danger: #ff596f;
+  --radius: 8px;
+  --radius-lg: 12px;
+  /* Day accent falls back to violet outside the Tagesorakel screen, which
+     overrides it per day via inline style. Keeps focus rings + glows themed. */
+  --day-accent: var(--violet);
+  /* One shared easing/duration for all hover/active micro-transitions. */
+  --ease-snap: 0.18s ease;
+  /* Cogitator-HUD panel language: mono stack for data values + chamfer size. */
+  --font-mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --chamfer: 12px;
+}
+
+/* Accessible-but-invisible text (LED badges keep their German labels). */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  color: inherit;
+  touch-action: manipulation;
+}
+
+/* Consistent keyboard focus ring on every interactive element (:where keeps
+   specificity at the pseudo-class level so themed rules can still layer). */
+:where(button, input, textarea, select, summary, a, [tabindex]):focus-visible {
+  outline: 2px solid var(--day-accent);
+  outline-offset: 2px;
+}
+
+/* Unified 0.18s micro-transitions on all interactive elements. */
+:where(.sidebar nav button,
+  .mobile-nav button,
+  .angel-controls button,
+  .welcome-panel button,
+  .connect-panel button,
+  .calendar-board__header button,
+  .mood-row button,
+  .rail-button,
+  .hour-logger__toggle,
+  .pokemon-sprite,
+  .date-cell,
+  .data-actions button) {
+  transition:
+    border-color var(--ease-snap),
+    box-shadow var(--ease-snap),
+    background-color var(--ease-snap),
+    transform var(--ease-snap),
+    opacity var(--ease-snap);
+}
+
+/* Gentle press feedback (buttons only, never while disabled). */
+:where(.sidebar nav button,
+  .mobile-nav button,
+  .angel-controls button,
+  .welcome-panel button,
+  .calendar-board__header button,
+  .mood-row button,
+  .hour-logger__toggle):active,
+:where(.rail-button, .connect-panel button, .data-actions button):active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.app-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 278px minmax(0, 1fr);
+  position: relative;
+  /* clip (not hidden): same clipping, but creates no scroll container, so the
+     mobile sticky Cogitator bar can stick against the body scrollport. */
+  overflow: clip;
+}
+
+.circuit-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.68;
+  background:
+    radial-gradient(circle at 72% 18%, rgba(137, 62, 255, 0.24), transparent 26%),
+    radial-gradient(circle at 22% 86%, rgba(135, 255, 101, 0.08), transparent 22%),
+    linear-gradient(90deg, transparent 0 46%, rgba(244, 240, 221, 0.1) 46% 47%, transparent 47%),
+    repeating-linear-gradient(0deg, rgba(244, 240, 221, 0.04) 0 1px, transparent 1px 48px),
+    repeating-linear-gradient(90deg, rgba(139, 76, 255, 0.06) 0 1px, transparent 1px 56px);
+}
+
+.circuit-bg::after {
+  content: "";
+  position: absolute;
+  inset: 18px;
+  border: 1px solid rgba(244, 240, 221, 0.12);
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 1px rgba(139, 76, 255, 0.08), 0 0 40px rgba(139, 76, 255, 0.12);
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  padding: 28px 18px;
+  border-right: 1px solid var(--line);
+  background: rgba(3, 5, 7, 0.78);
+  backdrop-filter: blur(18px);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.brand,
+.profile-card,
+.ritual-card,
+.calendar-board,
+.welcome-panel,
+.journal-panel,
+.settings-panel,
+.angel-companion {
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.012)),
+    var(--panel);
+  box-shadow: inset 0 0 0 1px rgba(139, 76, 255, 0.05), 0 18px 60px rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(18px);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--radius);
+}
+
+.brand svg {
+  color: var(--green);
+}
+
+.brand strong,
+.brand span {
+  display: block;
+}
+
+.brand strong {
+  font-size: 16px;
+}
+
+.brand span,
+.profile-card span,
+small,
+.speech-meta,
+.section-heading p {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.sidebar nav {
+  display: grid;
+  gap: 10px;
+}
+
+.sidebar nav button,
+.mobile-nav button,
+.angel-controls button,
+.welcome-panel button,
+.connect-panel button {
+  border: 1px solid var(--line);
+  background: rgba(9, 12, 15, 0.72);
+  border-radius: var(--radius);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 14px;
+  cursor: pointer;
+}
+
+.sidebar nav button.is-active,
+.mobile-nav button.is-active,
+.welcome-panel button {
+  border-color: rgba(155, 77, 255, 0.75);
+  box-shadow: 0 0 0 1px rgba(155, 77, 255, 0.25), 0 0 24px rgba(155, 77, 255, 0.18);
+}
+
+/* Hover-only effects stay behind (hover: hover) so they never stick on touch. */
+@media (hover: hover) {
+  .sidebar nav button:hover {
+    border-color: rgba(155, 77, 255, 0.75);
+    box-shadow: 0 0 0 1px rgba(155, 77, 255, 0.25), 0 0 24px rgba(155, 77, 255, 0.18);
+  }
+
+  .calendar-board__header button:hover,
+  .angel-controls button:hover {
+    border-color: rgba(155, 77, 255, 0.6);
+    box-shadow: 0 0 16px rgba(155, 77, 255, 0.18);
+  }
+
+  .mood-row button:hover:not(.is-selected) {
+    border-color: rgba(155, 77, 255, 0.45);
+  }
+}
+
+.profile-card {
+  margin-top: auto;
+  border-radius: var(--radius);
+  padding: 16px;
+  display: grid;
+  gap: 6px;
+}
+
+.main-surface {
+  position: relative;
+  z-index: 1;
+  padding: 28px;
+  height: 100vh;
+  overflow: auto;
+}
+
+.calendar-screen {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.72fr) minmax(480px, 1.28fr);
+  grid-template-rows: auto 1fr;
+  gap: 18px;
+  max-width: 1180px;
+}
+
+.welcome-panel {
+  padding: 28px;
+  border-radius: var(--radius-lg);
+}
+
+.welcome-panel span {
+  color: var(--green);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+.welcome-panel h1,
+.oracle-header h1,
+.section-heading h2 {
+  margin: 8px 0;
+  line-height: 1.05;
+}
+
+.welcome-panel h1 {
+  font-size: clamp(34px, 5vw, 64px);
+}
+
+.welcome-panel p,
+.oracle-header p,
+.ritual-card p,
+.connect-panel p {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+label {
+  display: grid;
+  gap: 8px;
+}
+
+input,
+textarea,
+select {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  outline: none;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--violet);
+  box-shadow: 0 0 0 3px rgba(155, 77, 255, 0.18);
+}
+
+.welcome-panel button {
+  margin-top: 18px;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(155, 77, 255, 0.34), rgba(135, 255, 101, 0.1));
+}
+
+.calendar-board {
+  grid-row: span 2;
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  min-height: 560px;
+}
+
+.calendar-board__header,
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.calendar-board__header button {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.28);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.weekday-grid,
+.date-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.weekday-grid {
+  color: var(--muted);
+  padding: 12px 0;
+}
+
+.weekday-grid span {
+  text-align: center;
+}
+
+.date-grid {
+  gap: 8px;
+}
+
+.date-cell {
+  min-height: 72px;
+  aspect-ratio: 1;
+  border: 1px solid rgba(244, 240, 221, 0.1);
+  background:
+    linear-gradient(var(--trace-hue), rgba(155, 77, 255, 0.08), rgba(255, 255, 255, 0.02)),
+    rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  position: relative;
+  cursor: pointer;
+}
+
+.date-cell span {
+  position: relative;
+  z-index: 1;
+  font-size: 18px;
+}
+
+.date-cell i {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  bottom: 12px;
+  left: 50%;
+  border-radius: 50%;
+  background: hsl(var(--trace-hue) 90% 65%);
+}
+
+.date-cell.is-empty {
+  visibility: hidden;
+}
+
+.date-cell.is-selected {
+  border-color: var(--violet);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.26), 0 0 32px rgba(155, 77, 255, 0.42);
+}
+
+.date-cell.is-selected::after {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  border: 1px solid rgba(244, 240, 221, 0.32);
+  border-radius: 50%;
+}
+
+.quick-oracle {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.quick-oracle article {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.28);
+  min-height: 100px;
+  display: grid;
+  align-content: space-between;
+}
+
+.quick-oracle b {
+  width: 100%;
+  height: 26px;
+  display: block;
+  border-radius: 6px;
+}
+
+/* Desktop: the Kalender view fills the viewport like the HUD — welcome panel
+   and board close flush on the top row, the quick-oracle strip runs full
+   width beneath both, and the date grid stretches to the board's edge so no
+   panel trails off into dead space. */
+@media (min-width: 1121px) and (min-height: 700px) {
+  .calendar-screen {
+    grid-template-columns: minmax(320px, 0.9fr) minmax(520px, 1.6fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    height: 100%;
+    max-width: 1560px;
+  }
+
+  .welcome-panel {
+    grid-column: 1;
+    grid-row: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .calendar-board {
+    grid-column: 2;
+    grid-row: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+
+  .date-grid {
+    min-height: 0;
+    grid-auto-rows: minmax(64px, 1fr);
+  }
+
+  .date-cell {
+    aspect-ratio: auto;
+    min-height: 0;
+  }
+
+  .quick-oracle {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .quick-oracle article {
+    min-height: 88px;
+  }
+}
+
+.content-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  gap: 18px;
+  max-width: 1220px;
+}
+
+.ritual-card {
+  border-radius: var(--radius);
+  padding: 16px;
+  min-height: 162px;
+}
+
+.ritual-card header,
+.connect-panel header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.dream-plate {
+  min-height: 105px;
+  margin-top: 12px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at center, rgba(135, 255, 101, 0.12), transparent 35%),
+    repeating-linear-gradient(90deg, rgba(244, 240, 221, 0.07) 0 1px, transparent 1px 16px),
+    rgba(0, 0, 0, 0.36);
+  border: 1px solid var(--line);
+}
+
+.pokemon-mark {
+  font-size: 42px;
+  color: var(--green);
+  text-shadow: 0 0 22px rgba(135, 255, 101, 0.42);
+}
+
+/* Compact numbers strip: triad + Schwingung inline, mono triad. */
+.numbers-card {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+
+.numbers-card strong {
+  font-size: clamp(20px, 2.4vh, 30px);
+  letter-spacing: 0.16em;
+  font-family: var(--font-mono);
+}
+
+.numbers-card p {
+  margin: 0;
+}
+
+.numbers-card header {
+  width: 100%;
+}
+
+.danger-text {
+  color: #f7a2ae !important;
+}
+
+.travel-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(244, 240, 221, 0.08);
+  color: var(--muted);
+}
+
+.travel-row b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.angel-companion {
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  align-self: start;
+  position: sticky;
+  top: 28px;
+}
+
+.angel-frame {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: #000;
+  aspect-ratio: 1;
+}
+
+.angel-frame img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  /* Barely-visible idle float, slower + out of phase with the pokemon bob.
+     The constant slight scale keeps the cover-fit image from revealing edges. */
+  animation: angel-float 8.5s ease-in-out -3.7s infinite alternate;
+}
+
+@keyframes angel-float {
+  from {
+    transform: scale(1.045) translateY(1.6px);
+  }
+  to {
+    transform: scale(1.045) translateY(-1.6px);
+  }
+}
+
+.speech-bubble {
+  margin-top: 12px;
+  padding: 14px;
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.48);
+  border: 1px solid rgba(244, 240, 221, 0.16);
+  position: relative;
+}
+
+.speech-bubble::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: 28px;
+  width: 14px;
+  height: 14px;
+  transform: rotate(45deg);
+  border-left: 1px solid rgba(244, 240, 221, 0.16);
+  border-top: 1px solid rgba(244, 240, 221, 0.16);
+  background: rgba(0, 0, 0, 0.48);
+}
+
+.speech-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.speech-bubble p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.angel-controls {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.angel-controls button {
+  flex: 1;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0;
+}
+
+.journal-panel,
+.settings-panel {
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+
+.section-heading {
+  justify-content: flex-start;
+  margin-bottom: 18px;
+}
+
+.section-heading svg {
+  color: var(--green);
+}
+
+.mood-row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.mood-row button {
+  min-height: 92px;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.32);
+  color: var(--text);
+  border-radius: var(--radius);
+  display: grid;
+  place-items: center;
+  gap: 6px;
+  cursor: pointer;
+  text-align: center;
+  font-size: 12px;
+}
+
+.mood-row button span {
+  font-size: 30px;
+}
+
+.mood-row button.is-selected {
+  border-color: var(--violet);
+  box-shadow: 0 0 24px rgba(155, 77, 255, 0.35);
+}
+
+.prompt-list,
+.settings-grid {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.prompt-list h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.prompt-card,
+.note-card,
+.setting-card,
+.toggle-card,
+.connect-panel {
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.28);
+  border-radius: var(--radius);
+  padding: 14px;
+}
+
+.prompt-card small,
+.note-card small {
+  color: var(--muted);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 180px;
+}
+
+.save-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--green);
+  margin-top: 12px;
+}
+
+.settings-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.toggle-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toggle-card input {
+  width: auto;
+}
+
+.setting-hint {
+  display: block;
+  margin-top: 8px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.toggle-card span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.connect-panel {
+  margin-top: 16px;
+}
+
+.connect-panel button {
+  cursor: pointer;
+  margin-top: 12px;
+}
+
+@media (hover: hover) {
+  .connect-panel button:hover:not(:disabled) {
+    border-color: rgba(155, 77, 255, 0.75);
+    box-shadow: 0 0 0 1px rgba(155, 77, 255, 0.25), 0 0 24px rgba(155, 77, 255, 0.18);
+  }
+}
+
+.connect-panel button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.key-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+  margin-top: 12px;
+}
+
+.key-row button {
+  margin-top: 0;
+  white-space: nowrap;
+}
+
+.key-status {
+  margin: 10px 0 0;
+  font-size: 14px;
+}
+
+.key-status.is-ok {
+  color: var(--green);
+}
+
+.key-status.is-fail {
+  color: var(--danger);
+}
+
+.privacy-note {
+  font-size: 12px;
+  color: var(--muted);
+  border-top: 1px dashed var(--line);
+  padding-top: 10px;
+  margin-bottom: 0;
+}
+
+.data-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Status diodes (green=live, copper=offline, violet=lokal/lädt) — replace
+   the old text pills; German labels stay via .visually-hidden / title. */
+.live-badge {
+  display: inline-flex;
+  align-items: center;
+  color: var(--muted);
+  flex: none;
+}
+
+.live-badge.is-live {
+  color: var(--green);
+}
+
+.live-badge.is-offline {
+  color: var(--copper);
+}
+
+.live-badge.is-loading {
+  color: var(--violet);
+}
+
+.led-dot {
+  position: relative;
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Pulsing halo — static shadow, animated opacity (compositor-only). */
+.led-dot::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  box-shadow: 0 0 9px 2px currentColor;
+  opacity: 0.35;
+  animation: glow-breathe 2.8s ease-in-out infinite alternate;
+}
+
+/* dream image */
+.dream-plate img {
+  width: 100%;
+  height: 100%;
+  min-height: 105px;
+  display: block;
+  object-fit: cover;
+  border-radius: 7px;
+}
+
+.image-card .dream-plate {
+  padding: 0;
+  overflow: hidden;
+  aspect-ratio: 640 / 400;
+  position: relative;
+}
+
+/* Slow hue-glow border pulse on the dream sigil, tinted by the day accent.
+   Static shadow + animated opacity keeps it compositor-only. */
+.image-card .dream-plate::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 7px;
+  pointer-events: none;
+  border: 1px solid color-mix(in srgb, var(--day-accent) 55%, transparent);
+  box-shadow:
+    inset 0 0 26px color-mix(in srgb, var(--day-accent) 22%, transparent),
+    0 0 18px color-mix(in srgb, var(--day-accent) 30%, transparent);
+  opacity: 0.35;
+  animation: glow-breathe 7s ease-in-out infinite alternate;
+}
+
+@keyframes glow-breathe {
+  from {
+    opacity: 0.2;
+  }
+  to {
+    opacity: 0.7;
+  }
+}
+
+.image-card small {
+  display: block;
+  margin-top: 8px;
+}
+
+/* pokemon card */
+.pokemon-sprite {
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  width: 100%;
+  margin-top: 10px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background:
+    radial-gradient(circle at center, rgba(155, 77, 255, 0.14), transparent 60%),
+    rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  position: relative;
+}
+
+/* Breathing day-accent aura behind the sprite (opacity-only, GPU-cheap). */
+.pokemon-sprite::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--day-accent) 30%, transparent), transparent 62%);
+  opacity: 0.4;
+  animation: glow-breathe 5.2s ease-in-out infinite alternate;
+}
+
+/* Quick sparkle when the shiny form flashes in. */
+.pokemon-sprite::after {
+  content: "✦";
+  position: absolute;
+  top: 8px;
+  right: 14px;
+  font-size: 15px;
+  color: var(--text);
+  text-shadow:
+    0 0 10px var(--day-accent),
+    0 0 20px var(--day-accent);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pokemon-sprite.is-shiny::after {
+  animation: sparkle-pop 0.65s ease both;
+}
+
+@keyframes sparkle-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.4) rotate(-30deg);
+  }
+  35% {
+    opacity: 1;
+    transform: scale(1.3) rotate(10deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.7) rotate(40deg) translateY(-7px);
+  }
+}
+
+.pokemon-sprite img {
+  width: 96px;
+  height: 96px;
+  image-rendering: pixelated;
+  position: relative;
+  /* Short entrance (replayed via key on sprite/day change), then idle bob. */
+  animation:
+    sprite-enter 0.45s ease both,
+    pokemon-float 4.8s ease-in-out 0.45s infinite;
+}
+
+@keyframes sprite-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes pokemon-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3.5px);
+  }
+}
+
+.pokemon-sprite span {
+  font-size: 11px;
+  color: var(--muted);
+  position: relative;
+}
+
+.pokemon-height {
+  text-transform: none;
+}
+
+.master-tag {
+  font-size: 10px;
+  color: var(--violet);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.numerology-description {
+  color: var(--muted);
+}
+
+/* Expandable description on the stat plates: the meaning title is the toggle. */
+.numer-details {
+  margin-top: 4px;
+}
+
+.numer-details summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--green);
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+}
+
+.numer-details p {
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 6px 0 0;
+}
+
+/* calendar today ring + journal dots */
+@media (hover: hover) {
+  .date-cell:not(.is-empty):hover {
+    transform: translateY(-1px);
+    border-color: hsl(var(--trace-hue, 265deg) 85% 66% / 0.55);
+    box-shadow: 0 0 18px hsl(var(--trace-hue, 265deg) 90% 62% / 0.22);
+  }
+}
+
+.date-cell.is-today {
+  border-color: rgba(135, 255, 101, 0.75);
+  box-shadow: inset 0 0 0 1px rgba(135, 255, 101, 0.35), 0 0 22px rgba(135, 255, 101, 0.3);
+}
+
+.date-cell.is-today::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1px dashed rgba(135, 255, 101, 0.55);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: today-ring-pulse 3.4s ease-in-out infinite;
+}
+
+@keyframes today-ring-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.date-cell .entry-dot {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 10px rgba(135, 255, 101, 0.8);
+}
+
+.mobile-nav {
+  display: none;
+}
+
+@media (max-width: 1120px) {
+  .calendar-screen,
+  .content-pair {
+    grid-template-columns: 1fr;
+  }
+
+  .calendar-board {
+    grid-row: auto;
+    min-height: 0;
+  }
+
+  .quick-oracle,
+  .settings-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .angel-companion {
+    position: relative;
+    top: auto;
+    max-width: 420px;
+    margin-inline: auto;
+  }
+}
+
+/* Below tablet-landscape the sidebar gives way to the bottom mobile nav. */
+@media (max-width: 899px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .main-surface {
+    height: auto;
+    min-height: 100vh;
+    /* body is the scroller here — no inner scroll container, or the sticky
+       Cogitator bar would latch onto a scrollport that never scrolls */
+    overflow: visible;
+    padding: 18px 18px calc(96px + env(safe-area-inset-bottom));
+  }
+
+  .mobile-nav {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    position: fixed;
+    z-index: 4;
+    left: calc(12px + env(safe-area-inset-left));
+    right: calc(12px + env(safe-area-inset-right));
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    padding: 8px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: rgba(5, 8, 10, 0.88);
+    backdrop-filter: blur(18px);
+  }
+
+  .mobile-nav button {
+    border: 0;
+    background: transparent;
+    display: grid;
+    place-items: center;
+    gap: 4px;
+    padding: 8px 4px;
+    min-height: 54px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 620px) {
+  .main-surface {
+    padding: 12px 12px calc(94px + env(safe-area-inset-bottom));
+  }
+
+  /* iOS Safari auto-zooms focused fields below 16px — keep form fields at 16px. */
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  .welcome-panel {
+    padding: 20px;
+  }
+
+  .quick-oracle,
+  .settings-grid,
+  .mood-row {
+    grid-template-columns: 1fr;
+  }
+
+  .travel-row {
+    grid-template-columns: 1fr;
+  }
+
+  .date-grid {
+    gap: 5px;
+  }
+
+  .date-cell {
+    min-height: 44px;
+  }
+
+  .date-cell span {
+    font-size: 14px;
+  }
+
+  .calendar-board {
+    padding: 14px;
+  }
+
+  .key-row {
+    grid-template-columns: 1fr;
+  }
+
+  .numerology-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .date-cell .entry-dot {
+    top: 4px;
+    right: 4px;
+    width: 5px;
+    height: 5px;
+  }
+}
+
+/* Motion safety, part 1: the OS preference kills every animation and
+   transition app-wide (entrance keyframes use fill-mode both, so they
+   simply land on their final frame). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Motion safety, part 2: the in-app "Bewegung reduzieren" setting. App.tsx
+   sets data-reduce-motion="true" on the .app-shell root (and on the
+   Tagesorakel screen), so one selector silences every view the same way. */
+[data-reduce-motion] *,
+[data-reduce-motion] *::before,
+[data-reduce-motion] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* ==================================================================== */
+/* Tagesorakel: "Kalender Detail Ansicht" (legacy S.O.U.L three zones)  */
+/* ==================================================================== */
+
+.soul-detail-screen {
+  max-width: 1500px;
+  --day-accent: var(--violet);
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+/* --- Cogitator-Leiste: slim MMO-style buff bar ------------------------ */
+.cogitator-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 7px 16px;
+  border: 1px solid var(--line);
+  background:
+    repeating-linear-gradient(0deg, rgba(244, 240, 221, 0.024) 0 1px, transparent 1px 3px),
+    linear-gradient(90deg, color-mix(in srgb, var(--day-accent) 11%, transparent), transparent 34%),
+    var(--panel);
+  backdrop-filter: blur(18px);
+}
+
+.cog-cell {
+  display: grid;
+  align-content: center;
+  gap: 3px;
+  padding: 2px 16px;
+  border-left: 1px solid rgba(244, 240, 221, 0.1);
+  min-width: 0;
+}
+
+.cog-cell:first-child {
+  border-left: 0;
+  padding-left: 0;
+}
+
+.cog-label {
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.cog-value {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.cog-sub {
+  font-size: 10.5px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 300px;
+}
+
+/* Sternzeichen-Glyphe in der Cogitator-Leiste (nur mit Geburtsdatum). */
+.cog-zodiac {
+  margin-left: 8px;
+  font-size: 15px;
+  color: var(--day-accent);
+  text-shadow: 0 0 12px color-mix(in srgb, var(--day-accent) 60%, transparent);
+  cursor: help;
+}
+
+.cog-color {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.cog-color strong {
+  font-size: 13.5px;
+}
+
+.cog-hex {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.cog-cell--status {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  padding-right: 0;
+}
+
+.cog-status-text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.day-color-swatch {
+  display: inline-block;
+  width: 46px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1px solid var(--line-strong);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--day-accent) 65%, transparent);
+}
+
+/* --- the three zones: logger | center | oracle rail ------------------ */
+.soul-detail-layout {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr) 330px;
+  grid-template-areas: "logger center rail";
+  gap: 16px;
+  align-items: start;
+}
+
+@media (min-width: 1500px) {
+  .soul-detail-layout {
+    grid-template-columns: 220px minmax(0, 1fr) 380px;
+  }
+}
+
+/* --- left rail: hourly universal logger ------------------------------ */
+.hour-logger {
+  grid-area: logger;
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.012)),
+    var(--panel);
+  box-shadow: inset 0 0 0 1px rgba(139, 76, 255, 0.05), 0 18px 60px rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(18px);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.hour-logger__toggle {
+  display: none;
+}
+
+.hour-logger__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.hour-logger__head svg {
+  color: var(--day-accent);
+  flex: none;
+}
+
+.hour-logger__count {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.hour-logger__body,
+.hour-logger__body-inner {
+  display: grid;
+  gap: 10px;
+}
+
+.hour-logger__body-inner {
+  min-height: 0;
+  /* Horizontal breathing room so focus rings survive the mobile overflow
+     clip; the negative margin keeps the visual alignment identical. */
+  padding-inline: 4px;
+  margin-inline: -4px;
+}
+
+.hour-logger__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.hour-row {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.hour-row__label {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+}
+
+.hour-row input {
+  padding: 7px 10px;
+  font-size: 13px;
+  border-radius: 6px;
+}
+
+.hour-row.has-entry .hour-row__label {
+  color: var(--green);
+  text-shadow: 0 0 10px rgba(135, 255, 101, 0.55);
+}
+
+.hour-row.has-entry input {
+  border-color: rgba(135, 255, 101, 0.4);
+  box-shadow: inset 2px 0 0 rgba(135, 255, 101, 0.75);
+}
+
+.hour-row.is-now .hour-row__label {
+  color: var(--day-accent);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--day-accent) 60%, transparent);
+}
+
+.hour-row.is-now input {
+  border-color: var(--day-accent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--day-accent) 40%, transparent),
+    0 0 16px color-mix(in srgb, var(--day-accent) 30%, transparent);
+}
+
+.hour-logger__hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--green);
+}
+
+/* --- center zone: day image + numbers + travel ----------------------- */
+.soul-center {
+  grid-area: center;
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.soul-center .ritual-card {
+  min-height: 0;
+}
+
+.travel-head {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  padding: 10px 0 4px;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.travel-head b {
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* --- "Auto im Weltall": animated space scene in the travel card ---------
+   Pure CSS: tiled radial-gradient starfields twinkle via opacity, the four
+   ride emojis glide along PCB-trace orbit lanes toward the glowing sun.
+   Loop durations mirror relative speeds (Rakete 6s < Lambo 10s < Zug 14s
+   < Fahrrad 22s). Everything is transform/opacity only; the container-query
+   unit (cqw) lets the keyframes span any card width. Under reduced motion
+   the gliders park at staggered base positions instead. */
+.space-scene {
+  position: relative;
+  container-type: inline-size;
+  height: 132px;
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 100% 50%, color-mix(in srgb, var(--copper) 18%, transparent), transparent 52%),
+    radial-gradient(ellipse at 0% 0%, rgba(155, 77, 255, 0.14), transparent 50%),
+    linear-gradient(180deg, #04050c, #0a0c18 55%, #04050c);
+}
+
+.space-stars {
+  position: absolute;
+  inset: 0;
+  background-repeat: repeat;
+  pointer-events: none;
+}
+
+.space-stars--far {
+  background-image:
+    radial-gradient(1px 1px at 13px 21px, rgba(244, 240, 221, 0.8), transparent 55%),
+    radial-gradient(1px 1px at 57px 68px, rgba(244, 240, 221, 0.5), transparent 55%),
+    radial-gradient(1px 1px at 101px 34px, rgba(155, 77, 255, 0.7), transparent 55%),
+    radial-gradient(1px 1px at 149px 88px, rgba(244, 240, 221, 0.6), transparent 55%),
+    radial-gradient(1px 1px at 173px 15px, rgba(135, 255, 101, 0.55), transparent 55%);
+  background-size: 190px 110px;
+  opacity: 0.7;
+  animation: star-twinkle 5.5s ease-in-out infinite alternate;
+}
+
+.space-stars--near {
+  background-image:
+    radial-gradient(1.5px 1.5px at 29px 45px, rgba(244, 240, 221, 0.9), transparent 60%),
+    radial-gradient(1.5px 1.5px at 118px 12px, rgba(244, 240, 221, 0.65), transparent 60%),
+    radial-gradient(1.5px 1.5px at 204px 78px, rgba(155, 77, 255, 0.8), transparent 60%),
+    radial-gradient(1.5px 1.5px at 251px 40px, rgba(244, 240, 221, 0.75), transparent 60%);
+  background-size: 270px 120px;
+  opacity: 0.9;
+  animation: star-twinkle 3.8s ease-in-out -1.9s infinite alternate;
+}
+
+@keyframes star-twinkle {
+  from {
+    opacity: 0.3;
+  }
+  to {
+    opacity: 0.95;
+  }
+}
+
+.space-sun {
+  position: absolute;
+  top: 50%;
+  right: -14px;
+  width: 46px;
+  height: 46px;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 38%, #ffe9a8, var(--copper) 62%, #7a3d12);
+  box-shadow:
+    0 0 26px 6px color-mix(in srgb, var(--copper) 55%, transparent),
+    0 0 60px 18px color-mix(in srgb, var(--copper) 25%, transparent);
+  animation: sun-breathe 6s ease-in-out infinite alternate;
+}
+
+@keyframes sun-breathe {
+  from {
+    transform: translateY(-50%) scale(1);
+  }
+  to {
+    transform: translateY(-50%) scale(1.08);
+  }
+}
+
+.space-moon {
+  position: absolute;
+  top: 12px;
+  right: 24%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 32%, #f4f0dd, #9aa0ad 70%, #5c6470);
+  box-shadow: 0 0 12px rgba(244, 240, 221, 0.35);
+  opacity: 0.9;
+}
+
+.orbit-lane {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 24px;
+}
+
+.orbit-lane--lambo {
+  top: 5%;
+}
+
+.orbit-lane--train {
+  top: 26%;
+}
+
+.orbit-lane--bike {
+  top: 47%;
+}
+
+.orbit-lane--ship {
+  top: 68%;
+}
+
+/* Faint PCB-trace lane the vehicle rides on. */
+.orbit-lane::before {
+  content: "";
+  position: absolute;
+  left: 4%;
+  right: 9%;
+  top: 50%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--day-accent) 45%, transparent) 14%,
+    color-mix(in srgb, var(--day-accent) 45%, transparent) 86%,
+    transparent
+  );
+  opacity: 0.4;
+}
+
+.orbit-glider {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  margin-top: -11px;
+  font-size: 15px;
+  line-height: 22px;
+  will-change: transform;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--day-accent) 45%, transparent));
+  animation: orbit-glide var(--glide-duration, 12s) linear var(--glide-delay, 0s) infinite;
+}
+
+@keyframes orbit-glide {
+  from {
+    transform: translateX(-34px);
+  }
+  to {
+    transform: translateX(calc(100cqw + 16px));
+  }
+}
+
+/* Per ride: loop duration (relative speed), negative delay (mid-flight on
+   load) and a static base offset used as parking spot when motion is off. */
+.orbit-lane--ship .orbit-glider {
+  --glide-duration: 6s;
+  --glide-delay: -2.5s;
+  transform: translateX(72cqw);
+}
+
+.orbit-lane--lambo .orbit-glider {
+  --glide-duration: 10s;
+  --glide-delay: -4s;
+  transform: translateX(52cqw);
+}
+
+.orbit-lane--train .orbit-glider {
+  --glide-duration: 14s;
+  --glide-delay: -6s;
+  transform: translateX(34cqw);
+}
+
+.orbit-lane--bike .orbit-glider {
+  --glide-duration: 22s;
+  --glide-delay: -3s;
+  transform: translateX(14cqw);
+}
+
+/* Face the emojis toward the sun (right); the rocket points 45° up by default. */
+.orbit-glider__icon {
+  display: inline-block;
+  transform: scaleX(-1);
+}
+
+.orbit-lane--ship .orbit-glider__icon {
+  transform: rotate(45deg);
+}
+
+/* --- right rail: tabbed Cogitator console ("◈ Orakel" / "⌬ Numerologie") */
+.soul-rail-zone {
+  grid-area: rail;
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+.soul-rail-zone .angel-companion {
+  /* relative (not static) cancels the journal-view sticky while keeping a
+     positioning context for the HUD corner brackets */
+  position: relative;
+  top: auto;
+}
+
+.soul-rail {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.012)),
+    var(--panel);
+  backdrop-filter: blur(18px);
+}
+
+.soul-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-bottom: 1px solid var(--line);
+  background: repeating-linear-gradient(0deg, rgba(244, 240, 221, 0.02) 0 1px, transparent 1px 3px);
+}
+
+.soul-tabs button {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  min-height: 42px;
+  padding: 0 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition:
+    color var(--ease-snap),
+    border-color var(--ease-snap),
+    background-color var(--ease-snap);
+}
+
+.soul-tabs button + button {
+  border-left: 1px solid var(--line);
+}
+
+.soul-tabs button.is-active {
+  color: var(--text);
+  border-bottom-color: var(--day-accent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--day-accent) 14%, transparent), transparent 82%);
+}
+
+@media (hover: hover) {
+  .soul-tabs button:hover:not(.is-active) {
+    color: var(--text);
+  }
+}
+
+.soul-tab-glyph {
+  color: var(--day-accent);
+  font-size: 14px;
+  text-shadow: 0 0 10px color-mix(in srgb, var(--day-accent) 60%, transparent);
+}
+
+/* Both panels stay mounted; CSS flips visibility so state survives switches. */
+.soul-tab-panel {
+  display: none;
+}
+
+.soul-tab-panel.is-active {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  min-height: 0;
+  align-content: start;
+}
+
+.trace-row {
+  position: relative;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.28);
+  padding: 12px;
+  transition: border-color var(--ease-snap);
+}
+
+.soul-center .ritual-card {
+  transition: border-color var(--ease-snap);
+}
+
+@media (hover: hover) {
+  .trace-row:hover,
+  .soul-center .ritual-card:hover {
+    border-color: color-mix(in srgb, var(--day-accent) 40%, var(--line));
+  }
+}
+
+.trace-row header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+/* Thin rule line running from the header text to the panel edge. */
+.trace-row header::after,
+.ritual-card header::after {
+  content: "";
+  flex: 1 1 10px;
+  height: 1px;
+  margin-left: 4px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--day-accent) 38%, var(--line)), transparent);
+}
+
+.trace-row header .live-badge {
+  order: 3;
+}
+
+.trace-row header::after {
+  order: 2;
+  margin-right: 2px;
+}
+
+.trace-row header svg {
+  color: var(--day-accent);
+  flex: none;
+}
+
+.trace-row p {
+  margin: 8px 0 0;
+  line-height: 1.5;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+
+.trace-sentence strong {
+  color: var(--text);
+}
+
+.trace-sentence em {
+  color: var(--text);
+}
+
+.trace-row .pokemon-types {
+  text-transform: capitalize;
+}
+
+/* --- loading skeletons ------------------------------------------------ */
+.skeleton-group {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.skeleton-line {
+  height: 12px;
+  border-radius: 6px;
+  display: block;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.05),
+    rgba(255, 255, 255, 0.14),
+    rgba(255, 255, 255, 0.05)
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.6s linear infinite;
+}
+
+@keyframes skeleton-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+[data-reduce-motion] .skeleton-line {
+  animation: none;
+}
+
+/* --- numerology reveal ------------------------------------------------ */
+.numer-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.numer-form label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.rail-button {
+  border: 1px solid var(--line);
+  background: rgba(9, 12, 15, 0.72);
+  border-radius: var(--radius);
+  min-height: 42px;
+  padding: 0 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+@media (hover: hover) {
+  .rail-button:hover:not(:disabled) {
+    border-color: var(--day-accent);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--day-accent) 30%, transparent),
+      0 0 20px color-mix(in srgb, var(--day-accent) 22%, transparent);
+  }
+}
+
+.rail-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* MMO stat sheet: 7 stat plates in a two-column grid, big mono number. */
+.numer-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.numer-list li {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(160deg, color-mix(in srgb, var(--day-accent) 7%, transparent), transparent 46%),
+    rgba(0, 0, 0, 0.3);
+  padding: 10px 12px 12px;
+  animation: rise-in 0.4s cubic-bezier(0.22, 0.9, 0.35, 1) both;
+}
+
+.numer-list li:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
+[data-reduce-motion] .numer-list li {
+  animation: none;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(9px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.numer-number {
+  font-family: var(--font-mono);
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.05;
+  color: var(--text);
+  text-shadow: 0 0 14px color-mix(in srgb, var(--day-accent) 35%, transparent);
+}
+
+.numer-list li strong {
+  font-size: 12px;
+  display: block;
+  letter-spacing: 0.04em;
+}
+
+.numer-list li .master-tag {
+  display: inline-block;
+  margin-top: 2px;
+}
+
+.numer-list li p {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+}
+
+.numer-list li.is-master {
+  border-color: rgba(155, 77, 255, 0.7);
+  box-shadow: inset 0 0 18px rgba(155, 77, 255, 0.16), 0 0 26px rgba(155, 77, 255, 0.28);
+}
+
+/* Master numbers keep their glow and gain a slow breathing pulse on top. */
+.numer-list li.is-master::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: inset 0 0 16px rgba(155, 77, 255, 0.2), 0 0 24px rgba(155, 77, 255, 0.38);
+  opacity: 0.35;
+  animation: glow-breathe 4.5s ease-in-out infinite alternate;
+}
+
+.numer-list li.is-master .numer-number {
+  color: var(--violet);
+  text-shadow: 0 0 18px rgba(155, 77, 255, 0.75);
+}
+
+.regen-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+/* --- Horoskop tab ----------------------------------------------------- */
+.zodiac-plate {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  margin-top: 10px;
+}
+
+.zodiac-glyph {
+  font-size: 44px;
+  line-height: 1;
+  color: var(--day-accent);
+  text-shadow: 0 0 18px color-mix(in srgb, var(--day-accent) 65%, transparent);
+}
+
+.zodiac-meta {
+  display: grid;
+  gap: 3px;
+}
+
+.zodiac-meta strong {
+  font-size: 15px;
+  letter-spacing: 0.05em;
+}
+
+.zodiac-range {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.zodiac-element {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--day-accent);
+}
+
+.horo-life {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(160deg, color-mix(in srgb, var(--day-accent) 7%, transparent), transparent 46%),
+    rgba(0, 0, 0, 0.3);
+}
+
+.horo-life strong {
+  display: block;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+.horo-life p {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+}
+
+.horo-life.is-master {
+  border-color: rgba(155, 77, 255, 0.7);
+  box-shadow: inset 0 0 18px rgba(155, 77, 255, 0.16), 0 0 26px rgba(155, 77, 255, 0.28);
+}
+
+.horo-life.is-master .numer-number {
+  color: var(--violet);
+  text-shadow: 0 0 18px rgba(155, 77, 255, 0.75);
+}
+
+.horo-text {
+  hyphens: auto;
+}
+
+.lucky-chips {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.lucky-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.3);
+  padding: 8px 10px;
+  min-width: 0;
+}
+
+.lucky-chip small {
+  width: 100%;
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+.lucky-chip strong {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.lucky-swatch {
+  width: 22px;
+  height: 12px;
+  flex: none;
+  border: 1px solid rgba(244, 240, 221, 0.25);
+}
+
+.horo-birth-form {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* --- Big Three (Sonne / Mond / Aszendent) ------------------------------ */
+.big-three {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.big3-plate {
+  position: relative;
+  display: grid;
+  gap: 3px;
+  justify-items: center;
+  align-content: start;
+  text-align: center;
+  min-width: 0;
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(160deg, color-mix(in srgb, var(--day-accent) 7%, transparent), transparent 46%),
+    rgba(0, 0, 0, 0.3);
+  padding: 10px 6px 12px;
+}
+
+.big3-plate small {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+.big3-glyph {
+  font-size: 26px;
+  line-height: 1.15;
+  color: var(--day-accent);
+  text-shadow: 0 0 14px color-mix(in srgb, var(--day-accent) 55%, transparent);
+}
+
+.big3-plate strong {
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  overflow-wrap: anywhere;
+}
+
+.big3-element {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--day-accent);
+}
+
+.big3-plate.is-missing .big3-glyph {
+  color: var(--muted);
+  text-shadow: none;
+  opacity: 0.55;
+}
+
+.big3-hint {
+  font-size: 9.5px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+/* "ungefähr" marker on approximate moon/ascendant plates (copper LED tone). */
+.approx-tag {
+  font-size: 9px;
+  color: var(--copper);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+/* --- S.O.U.L Ortung: Ortszahl + Impulszahl plates ---------------------- */
+.soul-ext-plate {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(160deg, color-mix(in srgb, var(--day-accent) 7%, transparent), transparent 46%),
+    rgba(0, 0, 0, 0.3);
+}
+
+.soul-ext-plate strong {
+  display: block;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+.soul-ext-plate p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.soul-ext-plate.is-master {
+  border-color: rgba(155, 77, 255, 0.7);
+  box-shadow: inset 0 0 18px rgba(155, 77, 255, 0.16), 0 0 26px rgba(155, 77, 255, 0.28);
+}
+
+.soul-ext-plate.is-master .numer-number {
+  color: var(--violet);
+  text-shadow: 0 0 18px rgba(155, 77, 255, 0.75);
+}
+
+.soul-ext-hint {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+/* --- Geburtsort search (Settings) -------------------------------------- */
+.geo-card {
+  display: grid;
+  gap: 8px;
+}
+
+.geo-search {
+  position: relative;
+  display: grid;
+  gap: 8px;
+}
+
+.geo-search .live-badge {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+}
+
+.geo-search input {
+  padding-right: 32px;
+}
+
+.geo-suggest {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.geo-suggest li button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  background: rgba(9, 12, 15, 0.72);
+  cursor: pointer;
+  font-size: 12.5px;
+  text-align: left;
+}
+
+.geo-suggest li button svg {
+  flex: none;
+  color: var(--day-accent, var(--green));
+}
+
+.geo-suggest-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.geo-suggest li button small {
+  margin-left: auto;
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--muted);
+}
+
+@media (hover: hover) {
+  .geo-suggest li button:hover {
+    border-color: rgba(155, 77, 255, 0.75);
+    box-shadow: 0 0 0 1px rgba(155, 77, 255, 0.25), 0 0 24px rgba(155, 77, 255, 0.18);
+  }
+}
+
+.geo-resolved {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  background: rgba(9, 12, 15, 0.72);
+}
+
+.geo-resolved > svg {
+  flex: none;
+  color: var(--green);
+}
+
+.geo-resolved-meta {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.geo-resolved-meta strong {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.geo-resolved-meta small {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.geo-clear {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .geo-clear:hover {
+    color: var(--danger);
+    border-color: var(--danger);
+  }
+}
+
+/* --- responsive: stack center -> rail -> collapsible logger -----------
+   Cutoff sits higher than the sidebar breakpoint: with the sidebar visible
+   the 3-zone layout only fits comfortably from ~1250px viewport width. */
+@media (max-width: 1249px) {
+  .soul-detail-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "center"
+      "rail"
+      "logger";
+  }
+
+  .hour-logger__head {
+    display: none;
+  }
+
+  .hour-logger__toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    border: 1px solid var(--line);
+    background: rgba(9, 12, 15, 0.72);
+    border-radius: 8px;
+    min-height: 44px;
+    padding: 0 12px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+
+  .hour-logger__toggle svg:first-child {
+    color: var(--day-accent);
+  }
+
+  .hour-logger__toggle .hour-logger__count {
+    margin-left: auto;
+  }
+
+  .hour-logger__chevron {
+    margin-left: 0;
+    transition: transform 0.2s ease;
+  }
+
+  /* Motion-safe accordion: grid-template-rows 0fr -> 1fr; visibility flips
+     after the collapse so hidden inputs leave the tab order. */
+  .hour-logger__body {
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 0.32s ease;
+  }
+
+  .hour-logger__body-inner {
+    overflow: hidden;
+  }
+
+  .hour-logger:not(.is-open) .hour-logger__body {
+    grid-template-rows: 0fr;
+    visibility: hidden;
+    transition:
+      grid-template-rows 0.32s ease,
+      visibility 0s 0.32s linear;
+  }
+
+  .hour-logger.is-open .hour-logger__chevron {
+    transform: rotate(180deg);
+  }
+}
+
+@media (max-width: 620px) {
+  .regen-buttons {
+    grid-template-columns: 1fr;
+  }
+
+  .space-scene {
+    height: 112px;
+  }
+
+  .space-sun {
+    width: 38px;
+    height: 38px;
+    right: -12px;
+  }
+
+  .travel-head {
+    display: none;
+  }
+
+  .day-color-swatch {
+    width: 36px;
+  }
+}
+
+[data-reduce-motion] .hour-logger__chevron {
+  transition: none;
+}
+
+/* ==================================================================== */
+/* Cogitator-HUD panel language (PCB-occult techpriest console skin)    */
+/* ==================================================================== */
+
+/* Chamfered console panels: top-right + bottom-left corners cut. The clip
+   would swallow outer drop shadows, so chamfered panels switch to a thin
+   double-line border (1px border + dark gap + faint inner hairline). */
+.brand,
+.profile-card,
+.welcome-panel,
+.calendar-board,
+.journal-panel,
+.settings-panel,
+.connect-panel,
+.ritual-card,
+.trace-row,
+.hour-logger,
+.angel-companion,
+.soul-rail,
+.cogitator-bar,
+.quick-oracle article,
+.prompt-card,
+.note-card,
+.setting-card,
+.toggle-card,
+.mobile-nav,
+.numer-list li,
+.horo-life,
+.lucky-chip,
+.big3-plate,
+.soul-ext-plate,
+.geo-resolved,
+.space-scene {
+  border-radius: 0;
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--chamfer)) 0,
+    100% var(--chamfer),
+    100% 100%,
+    var(--chamfer) 100%,
+    0 calc(100% - var(--chamfer))
+  );
+  box-shadow:
+    inset 0 0 0 1px rgba(3, 5, 7, 0.6),
+    inset 0 0 0 2px rgba(244, 240, 221, 0.05);
+}
+
+/* Smaller cut on the small plates/cards. */
+.trace-row,
+.quick-oracle article,
+.prompt-card,
+.note-card,
+.setting-card,
+.toggle-card,
+.numer-list li,
+.horo-life,
+.lucky-chip,
+.big3-plate,
+.soul-ext-plate,
+.geo-resolved,
+.space-scene,
+.brand,
+.profile-card {
+  --chamfer: 8px;
+}
+
+/* Chamfered interactive elements (small cut). Their focus outline would be
+   clipped away, so it moves inside the border box. */
+.rail-button,
+.welcome-panel button,
+.connect-panel button,
+.mood-row button,
+.hour-logger__toggle,
+.geo-suggest li button,
+.geo-clear,
+.sidebar nav button {
+  border-radius: 0;
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+}
+
+:where(.rail-button,
+  .welcome-panel button,
+  .connect-panel button,
+  .mood-row button,
+  .hour-logger__toggle,
+  .geo-suggest li button,
+  .geo-clear,
+  .sidebar nav button):focus-visible {
+  outline-offset: -4px;
+}
+
+/* L-shaped corner brackets on the key panels (free pseudo-elements only). */
+.calendar-board,
+.welcome-panel,
+.journal-panel,
+.settings-panel,
+.hour-logger {
+  position: relative;
+}
+
+.calendar-board::before,
+.welcome-panel::before,
+.journal-panel::before,
+.settings-panel::before,
+.hour-logger::before,
+.soul-rail::before,
+.angel-companion::before,
+.cogitator-bar::before,
+.calendar-board::after,
+.welcome-panel::after,
+.journal-panel::after,
+.settings-panel::after,
+.hour-logger::after,
+.soul-rail::after,
+.angel-companion::after,
+.cogitator-bar::after {
+  content: "";
+  position: absolute;
+  width: 15px;
+  height: 15px;
+  pointer-events: none;
+  opacity: 0.85;
+  z-index: 1;
+}
+
+.calendar-board::before,
+.welcome-panel::before,
+.journal-panel::before,
+.settings-panel::before,
+.hour-logger::before,
+.soul-rail::before,
+.angel-companion::before,
+.cogitator-bar::before {
+  top: 4px;
+  left: 4px;
+  border-top: 1px solid color-mix(in srgb, var(--day-accent) 65%, transparent);
+  border-left: 1px solid color-mix(in srgb, var(--day-accent) 65%, transparent);
+}
+
+.calendar-board::after,
+.welcome-panel::after,
+.journal-panel::after,
+.settings-panel::after,
+.hour-logger::after,
+.soul-rail::after,
+.angel-companion::after,
+.cogitator-bar::after {
+  bottom: 4px;
+  right: 4px;
+  border-bottom: 1px solid color-mix(in srgb, var(--day-accent) 65%, transparent);
+  border-right: 1px solid color-mix(in srgb, var(--day-accent) 65%, transparent);
+}
+
+/* Scanline overlay on panel headers (≤3% opacity, static). */
+.ritual-card header,
+.trace-row header,
+.connect-panel header,
+.hour-logger__head,
+.calendar-board__header,
+.section-heading {
+  background-image: repeating-linear-gradient(0deg, rgba(244, 240, 221, 0.025) 0 1px, transparent 1px 3px);
+}
+
+/* Uppercase glyph-prefixed headers with wide tracking, app-wide. */
+.section-heading h2,
+.calendar-board__header h2 {
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+  font-size: 17px;
+}
+
+.calendar-board__header h2::before {
+  content: "✦ ";
+  color: var(--day-accent);
+}
+
+.section-heading h2::before {
+  content: "◈ ";
+  color: var(--day-accent);
+}
+
+.connect-panel h3 {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 14px;
+}
+
+.connect-panel h3::before {
+  content: "⌬ ";
+  color: var(--day-accent);
+}
+
+.hour-logger__head strong::before {
+  content: "⏣ ";
+  color: var(--day-accent);
+}
+
+.prompt-list h3 {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 14px;
+}
+
+/* Monospace terminal type for all data values. */
+.travel-row b,
+.travel-head b,
+.hour-row__label,
+.hour-logger__count,
+.quick-oracle strong,
+.date-cell span,
+.weekday-grid span,
+.key-status {
+  font-family: var(--font-mono);
+}
+
+.weekday-grid {
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 11px;
+}
+
+.date-cell {
+  border-radius: 2px;
+}
+
+.quick-oracle small {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 10.5px;
+}
+
+.travel-row {
+  padding: 7px 0;
+  font-size: 13px;
+}
+
+/* Thin themed scrollbars for the internal console scrollers. */
+.hour-logger__body,
+.soul-tab-panel,
+.speech-bubble,
+.main-surface {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--day-accent) 40%, rgba(255, 255, 255, 0.08)) transparent;
+}
+
+.hour-logger__body {
+  position: relative;
+}
+
+/* ==================================================================== */
+/* Desktop dashboard: Tagesorakel fills the viewport, zero page scroll  */
+/* (≥1250px wide and ≥800px tall; below that: normal document flow).    */
+/* ==================================================================== */
+@media (min-width: 1250px) and (min-height: 800px) {
+  .main-surface:has(> .soul-detail-screen) {
+    overflow: hidden;
+    padding: 20px 24px;
+  }
+
+  .soul-detail-screen {
+    height: 100%;
+    grid-template-rows: auto minmax(0, 1fr);
+    align-content: stretch;
+  }
+
+  .soul-detail-layout {
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  /* Left console rail: header fixed, 24 hours scroll internally. */
+  .hour-logger {
+    min-height: 0;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .hour-logger__body {
+    overflow-y: auto;
+    padding-right: 2px;
+  }
+
+  /* Center column: sigil flexes, numbers strip + travel board stay fixed. */
+  .soul-center {
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr) auto auto;
+  }
+
+  .soul-center .image-card {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .soul-center .image-card .dream-plate {
+    flex: 1;
+    min-height: 110px;
+    aspect-ratio: auto;
+  }
+
+  .soul-center .image-card .dream-plate img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .space-scene {
+    height: clamp(96px, 14vh, 132px);
+  }
+
+  /* Right rail: tab panel scrolls internally, angel docks at the bottom. */
+  .soul-rail-zone {
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr) auto;
+    align-content: stretch;
+  }
+
+  .soul-rail {
+    min-height: 0;
+  }
+
+  .soul-tab-panel.is-active {
+    overflow-y: auto;
+  }
+
+  /* Angel as compact HUD dock: portrait | speech | control column. */
+  .soul-rail-zone .angel-companion {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr) 32px;
+    gap: 10px;
+    padding: 10px;
+    align-items: center;
+  }
+
+  .soul-rail-zone .angel-frame {
+    width: 64px;
+    height: 64px;
+    aspect-ratio: auto;
+    border-radius: 4px;
+  }
+
+  .soul-rail-zone .speech-bubble {
+    margin-top: 0;
+    padding: 8px 10px;
+    max-height: 96px;
+    overflow-y: auto;
+    align-self: stretch;
+  }
+
+  .soul-rail-zone .speech-bubble::before {
+    display: none;
+  }
+
+  .soul-rail-zone .speech-meta {
+    font-size: 10px;
+    margin-bottom: 4px;
+  }
+
+  .soul-rail-zone .speech-bubble p {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .soul-rail-zone .angel-controls {
+    flex-direction: column;
+    margin-top: 0;
+    gap: 6px;
+  }
+
+  .soul-rail-zone .angel-controls button {
+    min-height: 28px;
+    flex: 1;
+  }
+}
+
+/* ==================================================================== */
+/* Mobile/tablet (<1250px): sticky Cogitator bar + sticky tab strip     */
+/* halve the scroll; single-column flow and bottom nav stay untouched.  */
+/* ==================================================================== */
+@media (max-width: 1249px) {
+  .soul-detail-screen {
+    gap: 12px;
+  }
+
+  .cogitator-bar {
+    position: sticky;
+    top: 0;
+    z-index: 6;
+    height: 48px;
+    padding: 4px 12px;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .cog-cell {
+    /* rigid cells: the slim bar pans horizontally instead of overlapping */
+    flex: none;
+    padding: 0 10px;
+    gap: 1px;
+  }
+
+  .cog-label {
+    font-size: 8.5px;
+  }
+
+  .cog-value {
+    font-size: 12.5px;
+  }
+
+  .cog-color strong {
+    font-size: 12px;
+  }
+
+  .day-color-swatch {
+    width: 28px;
+    height: 12px;
+  }
+
+  .cog-sub,
+  .cog-cell--mood,
+  .cog-cell--angel,
+  .cog-status-text {
+    display: none;
+  }
+
+  .soul-tabs {
+    position: sticky;
+    top: 48px;
+    z-index: 5;
+    background:
+      repeating-linear-gradient(0deg, rgba(244, 240, 221, 0.02) 0 1px, transparent 1px 3px),
+      rgba(7, 10, 13, 0.96);
+  }
+}
+
+@media (max-width: 620px) {
+  .cog-cell--date .cog-label,
+  .cog-cell--color .cog-label,
+  .cog-color strong,
+  .cog-hex {
+    display: none;
+  }
+
+  .cog-cell {
+    padding: 0 8px;
+  }
+
+  .cog-value {
+    font-size: 11.5px;
+  }
+}

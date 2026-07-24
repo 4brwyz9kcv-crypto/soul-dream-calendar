@@ -1,0 +1,18 @@
+[package]
+name = "soul-dream-calendar"
+version = "0.1.0"
+description = "Soul Dream Calendar desktop shell"
+authors = ["Soul Dream Calendar"]
+edition = "2021"
+
+[lib]
+name = "soul_dream_calendar_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

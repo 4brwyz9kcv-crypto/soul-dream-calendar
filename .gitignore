@@ -1,0 +1,8 @@
+node_modules/
+dist/
+dist-compact/
+src-tauri/target/
+*.local
+.DS_Store
+.vite/
+coverage/

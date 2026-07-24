@@ -1,0 +1,10 @@
+# Die Engel-Assets sind gross (bis ~18 MB pro GIF) und binaer.
+# Ueber Git LFS bleibt der Klon leicht und die History sauber.
+*.gif filter=lfs diff=lfs merge=lfs -text
+*.png filter=lfs diff=lfs merge=lfs -text
+
+# Zeilenenden deterministisch halten (Windows <-> CI)
+* text=auto eol=lf
+*.png -text
+*.gif -text
+*.ico -text
