@@ -2976,3 +2976,162 @@ textarea {
     font-size: 11.5px;
   }
 }
+
+/* ── Absturzschirm ────────────────────────────────────────────────────────
+   Fängt Renderfehler ab (siehe ErrorBoundary.tsx). Bewusst ohne die
+   Circuit-Hintergründe und ohne Schriftakrobatik: hier zählt, dass der
+   Nutzer sofort sieht, dass seine Daten sicher sind. */
+.crash-screen {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 24px;
+  background: var(--bg);
+}
+
+.crash-card {
+  width: min(520px, 100%);
+  display: grid;
+  gap: 14px;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel-solid);
+  box-shadow: 0 0 48px rgb(255 89 111 / 12%);
+}
+
+.crash-card > svg {
+  color: var(--danger);
+}
+
+.crash-card h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  letter-spacing: 0.02em;
+}
+
+.crash-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.crash-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.crash-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  transition: background var(--ease-snap), border-color var(--ease-snap);
+}
+
+.crash-actions button:hover {
+  background: rgb(244 240 221 / 8%);
+}
+
+.crash-actions button.is-primary {
+  border-color: var(--violet);
+  background: rgb(155 77 255 / 18%);
+}
+
+.crash-card details {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.crash-card summary {
+  cursor: pointer;
+}
+
+.crash-card pre {
+  overflow-x: auto;
+  margin: 8px 0 0;
+  padding: 10px;
+  border-radius: var(--radius);
+  background: rgb(0 0 0 / 40%);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ── Speicherwarnung ──────────────────────────────────────────────────────
+   Sichtbar über allen Ansichten, sobald localStorage voll oder blockiert
+   ist — der einzige Fall, in dem in einer App ohne Backend still Daten
+   verloren gehen könnten. */
+.storage-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  background: rgb(255 89 111 / 10%);
+}
+
+.storage-notice > svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--danger);
+}
+
+.storage-notice div {
+  flex: 1;
+  min-width: 0;
+}
+
+.storage-notice strong {
+  display: block;
+  font-size: 0.92rem;
+}
+
+.storage-notice p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.storage-notice button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  align-self: center;
+  padding: 8px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.storage-notice button:hover {
+  background: rgb(244 240 221 / 8%);
+}
+
+@media (max-width: 640px) {
+  .storage-notice {
+    flex-wrap: wrap;
+  }
+
+  .storage-notice button {
+    width: 100%;
+    justify-content: center;
+  }
+}

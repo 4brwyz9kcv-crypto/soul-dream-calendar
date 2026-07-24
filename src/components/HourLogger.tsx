@@ -1,5 +1,6 @@
 import { AlarmClock, ChevronDown, Save } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useDebouncedPersist } from "../hooks/useDebouncedPersist";
 import { loadHourLog, saveHourLog } from "../services/storage";
 import type { HourLog } from "../types";
 
@@ -24,9 +25,16 @@ export function HourLogger({ dayKey, isToday }: HourLoggerProps) {
   const [currentHour, setCurrentHour] = useState(() => new Date().getHours());
   const bodyRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  // Tageswechsel waehrend des Renderns nachziehen (siehe App.tsx): so passen
+  // Tag und Inhalt schon zusammen, bevor der Speicher-Hook laeuft.
+  const [loadedDay, setLoadedDay] = useState(dayKey);
+  if (loadedDay !== dayKey) {
+    setLoadedDay(dayKey);
     setHours(loadHourLog(dayKey));
-  }, [dayKey]);
+  }
+
+  const persistHours = useCallback((next: HourLog) => saveHourLog(dayKey, next), [dayKey]);
+  useDebouncedPersist(dayKey, hours, persistHours);
 
   // Desktop console rail: center the current hour in the internal scroller on
   // mount / day switch (today only). Sets scrollTop directly instead of
@@ -47,12 +55,10 @@ export function HourLogger({ dayKey, isToday }: HourLoggerProps) {
     return () => window.clearInterval(timer);
   }, [isToday]);
 
+  // Reiner Zustandsuebergang - das Schreiben uebernimmt der Speicher-Hook.
+  // Vorher stand saveHourLog im Updater und lief unter StrictMode doppelt.
   const updateHour = (hour: number, value: string) => {
-    setHours((current) => {
-      const next = { ...current, [hour]: value };
-      saveHourLog(dayKey, next);
-      return next;
-    });
+    setHours((current) => ({ ...current, [hour]: value }));
   };
 
   const filledCount = allHours.filter((hour) => (hours[hour] ?? "").trim().length > 0).length;

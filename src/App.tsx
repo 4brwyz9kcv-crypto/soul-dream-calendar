@@ -14,6 +14,8 @@ import { JournalPanel } from "./components/JournalPanel";
 import { OracleCards } from "./components/OracleCards";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { SoulDetail } from "./components/SoulDetail";
+import { StorageNotice } from "./components/StorageNotice";
+import { useDebouncedPersist } from "./hooks/useDebouncedPersist";
 import { angelAssets, getAngelSpeech } from "./services/angel";
 import { toDayKey } from "./services/dates";
 import { dreamImageDataUrl } from "./services/dreamImage";
@@ -21,6 +23,7 @@ import { zodiacSign } from "./services/horoscope";
 import { loadLiveDayData } from "./services/live";
 import { getDayOracle } from "./services/oracle";
 import {
+  exportAllData,
   loadJournalEntry,
   loadMoodEntry,
   loadSettings,
@@ -76,22 +79,26 @@ export default function App() {
     [oracle.angelAssetId, settings.selectedAngelId]
   );
 
-  useEffect(() => {
+  // Tageswechsel waehrend des Renderns nachziehen, nicht im Effect. Sonst
+  // rendert React einmal mit neuem Datum aber noch altem Eintrag, und der
+  // Speicher-Hook haelt den danach nachgereichten Eintrag faelschlich fuer
+  // eine Nutzereingabe - was jeden bloss angesehenen Tag angelegt haette.
+  const [loadedIso, setLoadedIso] = useState(selectedIso);
+  if (loadedIso !== selectedIso) {
+    setLoadedIso(selectedIso);
     setJournalEntry(loadJournalEntry(selectedIso));
     setMoodEntry(loadMoodEntry(selectedIso));
-  }, [selectedIso]);
+  }
 
-  useEffect(() => {
-    saveSettings(settings);
-  }, [settings]);
-
-  useEffect(() => {
-    saveJournalEntry(journalEntry);
-  }, [journalEntry]);
-
-  useEffect(() => {
-    if (moodEntry) saveMoodEntry(moodEntry);
-  }, [moodEntry]);
+  // Alle drei liefen vorher ungebremst bei jeder Zustandsaenderung - also bei
+  // jedem einzelnen Tastendruck im Namensfeld und im Journal. Gebuendelt wird
+  // pro Tippgeraeusch nur noch einmal geschrieben, beim Tageswechsel und beim
+  // Schliessen des Tabs sofort (siehe useDebouncedPersist).
+  useDebouncedPersist("settings", settings, saveSettings);
+  useDebouncedPersist(selectedIso, journalEntry, saveJournalEntry);
+  useDebouncedPersist(selectedIso, moodEntry, (entry) => {
+    if (entry) saveMoodEntry(entry);
+  });
 
   // Live day data (PokeAPI, Wikipedia, Numbers API) — null while loading,
   // every field degrades to the deterministic offline fallback on its own.
@@ -126,6 +133,17 @@ export default function App() {
 
   const updateSettings = (next: UserSettings) => {
     setSettings(next);
+  };
+
+  /** Notfall-Export aus dem Speicherhinweis heraus (kein API-Key enthalten). */
+  const downloadBackup = () => {
+    const blob = new Blob([exportAllData()], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `soul-dream-calendar-${todayIso}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const renderMain = () => {
@@ -325,6 +343,7 @@ export default function App() {
       </aside>
 
       <main className="main-surface">
+        <StorageNotice onExport={downloadBackup} />
         {renderMain()}
       </main>
 

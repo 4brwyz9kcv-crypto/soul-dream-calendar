@@ -1,4 +1,5 @@
 import type { HourLog, JournalEntry, MoodEntry, UserSettings } from "../types";
+import { allKeys, readKey, removeKey, writeKey } from "./safeStorage";
 
 const SETTINGS_KEY = "sdc.settings";
 const JOURNAL_PREFIX = "sdc.journal.";
@@ -7,12 +8,16 @@ const HOURS_PREFIX = "sdc.hours.";
 const OPENAI_KEY = "sdc.openai.key";
 
 export const defaultSettings: UserSettings = {
-  name: "Lukas",
+  // Leer statt eines erfundenen Namens: der Onboarding-Dialog fragt beim
+  // ersten Start danach, und bis dahin spricht die App neutral.
+  name: "",
   providerMode: "local",
   angelMuted: false,
   angelPinned: true,
   reduceMotion: false,
-  selectedAngelId: "seraph"
+  selectedAngelId: "seraph",
+  showPokemon: true,
+  onboarded: false
 };
 
 function safeParse<T>(value: string | null, fallback: T): T {
@@ -25,15 +30,15 @@ function safeParse<T>(value: string | null, fallback: T): T {
 }
 
 export function loadSettings(): UserSettings {
-  return safeParse<UserSettings>(localStorage.getItem(SETTINGS_KEY), defaultSettings);
+  return safeParse<UserSettings>(readKey(SETTINGS_KEY), defaultSettings);
 }
 
 export function saveSettings(settings: UserSettings): void {
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  writeKey(SETTINGS_KEY, JSON.stringify(settings));
 }
 
 export function loadJournalEntry(dayKey: string): JournalEntry {
-  return safeParse<JournalEntry>(localStorage.getItem(JOURNAL_PREFIX + dayKey), {
+  return safeParse<JournalEntry>(readKey(JOURNAL_PREFIX + dayKey), {
     dayKey,
     note: "",
     promptResponses: {},
@@ -42,14 +47,14 @@ export function loadJournalEntry(dayKey: string): JournalEntry {
 }
 
 export function saveJournalEntry(entry: JournalEntry): void {
-  localStorage.setItem(
+  writeKey(
     JOURNAL_PREFIX + entry.dayKey,
     JSON.stringify({ ...entry, updatedAt: new Date().toISOString() })
   );
 }
 
 export function loadMoodEntry(dayKey: string): MoodEntry | null {
-  const value = localStorage.getItem(MOOD_PREFIX + dayKey);
+  const value = readKey(MOOD_PREFIX + dayKey);
   if (!value) return null;
   try {
     return JSON.parse(value) as MoodEntry;
@@ -59,7 +64,7 @@ export function loadMoodEntry(dayKey: string): MoodEntry | null {
 }
 
 export function saveMoodEntry(entry: MoodEntry): void {
-  localStorage.setItem(
+  writeKey(
     MOOD_PREFIX + entry.dayKey,
     JSON.stringify({ ...entry, updatedAt: new Date().toISOString() })
   );
@@ -70,16 +75,16 @@ export function saveMoodEntry(entry: MoodEntry): void {
  * it is never bundled, never exported and never sent anywhere except api.openai.com.
  */
 export function getOpenAiKey(): string | null {
-  const value = localStorage.getItem(OPENAI_KEY);
+  const value = readKey(OPENAI_KEY);
   return value && value.trim().length > 0 ? value : null;
 }
 
 export function setOpenAiKey(key: string): void {
-  localStorage.setItem(OPENAI_KEY, key.trim());
+  writeKey(OPENAI_KEY, key.trim());
 }
 
 export function clearOpenAiKey(): void {
-  localStorage.removeItem(OPENAI_KEY);
+  removeKey(OPENAI_KEY);
 }
 
 /**
@@ -89,11 +94,10 @@ export function clearOpenAiKey(): void {
  */
 export function listJournalDayKeys(): string[] {
   const keys: string[] = [];
-  for (let index = 0; index < localStorage.length; index += 1) {
-    const storageKey = localStorage.key(index);
-    if (!storageKey || !storageKey.startsWith(JOURNAL_PREFIX)) continue;
+  for (const storageKey of allKeys()) {
+    if (!storageKey.startsWith(JOURNAL_PREFIX)) continue;
     try {
-      const entry = JSON.parse(localStorage.getItem(storageKey) ?? "") as Partial<JournalEntry>;
+      const entry = JSON.parse(readKey(storageKey) ?? "") as Partial<JournalEntry>;
       const hasNote = typeof entry.note === "string" && entry.note.trim().length > 0;
       const hasPrompts =
         !!entry.promptResponses &&
@@ -112,7 +116,7 @@ export function listJournalDayKeys(): string[] {
  * corrupted row degrades to an empty log instead of throwing.
  */
 export function loadHourLog(dayKey: string): HourLog {
-  const raw = localStorage.getItem(HOURS_PREFIX + dayKey);
+  const raw = readKey(HOURS_PREFIX + dayKey);
   if (!raw) return {};
   try {
     const parsed: unknown = JSON.parse(raw);
@@ -144,10 +148,10 @@ export function saveHourLog(dayKey: string, hours: HourLog): void {
     }
   }
   if (Object.keys(compact).length === 0) {
-    localStorage.removeItem(HOURS_PREFIX + dayKey);
+    removeKey(HOURS_PREFIX + dayKey);
     return;
   }
-  localStorage.setItem(HOURS_PREFIX + dayKey, JSON.stringify(compact));
+  writeKey(HOURS_PREFIX + dayKey, JSON.stringify(compact));
 }
 
 interface ExportPayload {
@@ -168,10 +172,8 @@ export function exportAllData(): string {
   const journal: Record<string, JournalEntry> = {};
   const moods: Record<string, MoodEntry> = {};
   const hours: Record<string, HourLog> = {};
-  for (let index = 0; index < localStorage.length; index += 1) {
-    const storageKey = localStorage.key(index);
-    if (!storageKey) continue;
-    const raw = localStorage.getItem(storageKey);
+  for (const storageKey of allKeys()) {
+    const raw = readKey(storageKey);
     if (!raw) continue;
     try {
       if (storageKey.startsWith(JOURNAL_PREFIX)) {
@@ -228,11 +230,11 @@ export function importAllData(json: string): boolean {
   saveSettings({ ...defaultSettings, ...(parsed.settings as Partial<UserSettings>) });
   for (const [dayKey, entry] of Object.entries(journal)) {
     if (!isRecord(entry)) continue;
-    localStorage.setItem(JOURNAL_PREFIX + dayKey, JSON.stringify({ ...entry, dayKey }));
+    writeKey(JOURNAL_PREFIX + dayKey, JSON.stringify({ ...entry, dayKey }));
   }
   for (const [dayKey, entry] of Object.entries(moods)) {
     if (!isRecord(entry)) continue;
-    localStorage.setItem(MOOD_PREFIX + dayKey, JSON.stringify({ ...entry, dayKey }));
+    writeKey(MOOD_PREFIX + dayKey, JSON.stringify({ ...entry, dayKey }));
   }
   for (const [dayKey, entry] of Object.entries(hours)) {
     if (!isRecord(entry)) continue;

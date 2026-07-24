@@ -195,6 +195,19 @@ export interface UserSettings {
   reduceMotion: boolean;
   selectedAngelId: string;
   /**
+   * Whether the "Pokemon des Tages" block is shown. The sprites come from
+   * PokeAPI and are Nintendo/Game Freak artwork — fine for a personal build,
+   * not something a commercial release should ship by default. The switch
+   * lets the same codebase serve both cases; everything else about the day
+   * (the deterministic seed included) is unaffected.
+   */
+  showPokemon: boolean;
+  /**
+   * Set once the user has been through the welcome flow. Absent/false means a
+   * fresh install, which opens onboarding instead of guessing a name.
+   */
+  onboarded: boolean;
+  /**
    * Optional birth date as ISO "yyyy-mm-dd" (or absent/empty when unset).
    * Feeds the personal seed that makes every oracle unique per person and
    * drives the Horoskop tab. Absent by default so fresh installs behave
