@@ -56,10 +56,32 @@ function serviceWorkerVersion(): Plugin {
   };
 }
 
+/**
+ * Setzt die absolute Adresse fuer og:image.
+ *
+ * Open-Graph-Scraper loesen relative Bildpfade nicht zuverlaessig auf, die
+ * Adresse muss also absolut im HTML stehen. Sie ist aber je Deployment
+ * verschieden - Hauptseite und Vorschau liegen unter verschiedenen Pfaden.
+ *
+ * `SDC_SITE_URL` ueberschreibt die Vorgabe, z. B.:
+ *   SDC_SITE_URL=https://user.github.io/soul-dream-calendar-next/ npm run build
+ */
+function siteUrl(): Plugin {
+  const CANONICAL = "https://4brwyz9kcv-crypto.github.io/soul-dream-calendar/";
+  const base = (process.env.SDC_SITE_URL ?? CANONICAL).replace(/\/?$/, "/");
+
+  return {
+    name: "sdc-site-url",
+    transformIndexHtml(html) {
+      return html.replaceAll("%SDC_SITE_URL%", base);
+    }
+  };
+}
+
 export default defineConfig({
   // Relative base so the same build works on GitHub Pages subpaths, LAN preview and Tauri.
   base: "./",
-  plugins: [react(), serviceWorkerVersion()],
+  plugins: [react(), serviceWorkerVersion(), siteUrl()],
   resolve: {
     alias: {
       "@angel-assets": fileURLToPath(new URL("./src/services/angelAssets.full.ts", import.meta.url))
