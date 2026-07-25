@@ -99,15 +99,31 @@ export function AngelCompanion({
         <p>{muted ? "Der Engel ist stummgeschaltet. Das Signal bleibt sichtbar." : line?.text}</p>
       </div>
 
-      <div className="angel-controls" aria-label="Engel Steuerung">
-        <button type="button" onClick={() => onMutedChange(!muted)} title={muted ? "Engel aktivieren" : "Engel stummschalten"}>
-          {muted ? <BellOff size={16} /> : <Volume2 size={16} />}
+      {/* title allein reicht nicht: Screenreader lesen es unzuverlaessig, und
+          per Tastatur ist es gar nicht erreichbar. Deshalb ueberall aria-label. */}
+      <div className="angel-controls" role="group" aria-label="Engel Steuerung">
+        <button
+          type="button"
+          onClick={() => onMutedChange(!muted)}
+          aria-pressed={muted}
+          aria-label={muted ? "Engel aktivieren" : "Engel stummschalten"}
+        >
+          {muted ? <BellOff size={16} aria-hidden="true" /> : <Volume2 size={16} aria-hidden="true" />}
         </button>
-        <button type="button" onClick={() => setLineIndex((current) => current + 1)} title="Naechste Engelsbotschaft">
+        <button
+          type="button"
+          onClick={() => setLineIndex((current) => current + 1)}
+          aria-label="Naechste Engelsbotschaft"
+        >
           <span aria-hidden="true">↻</span>
         </button>
-        <button type="button" onClick={() => onPinnedChange(!pinned)} title={pinned ? "Engel loesen" : "Engel anheften"}>
-          {pinned ? <Pin size={16} /> : <PinOff size={16} />}
+        <button
+          type="button"
+          onClick={() => onPinnedChange(!pinned)}
+          aria-pressed={pinned}
+          aria-label={pinned ? "Engel loesen" : "Engel anheften"}
+        >
+          {pinned ? <Pin size={16} aria-hidden="true" /> : <PinOff size={16} aria-hidden="true" />}
         </button>
       </div>
     </aside>

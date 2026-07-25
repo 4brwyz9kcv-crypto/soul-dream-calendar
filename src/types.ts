@@ -150,7 +150,8 @@ export interface LiveNumberFact {
 
 /** Aggregated async day data; every field degrades gracefully to offline. */
 export interface LiveDayData {
-  pokemon: LivePokemon;
+  /** null, wenn der Nutzer den Pokemon-Block abgeschaltet hat. */
+  pokemon: LivePokemon | null;
   wiki: LiveWikiFact;
   numberFact: LiveNumberFact;
 }

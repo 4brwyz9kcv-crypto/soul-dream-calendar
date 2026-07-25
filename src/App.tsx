@@ -19,7 +19,9 @@ import { SettingsPanel } from "./components/SettingsPanel";
 import { ShareDayButton } from "./components/ShareDayButton";
 import { SoulDetail } from "./components/SoulDetail";
 import { StorageNotice } from "./components/StorageNotice";
+import { UpdateNotice } from "./components/UpdateNotice";
 import { useDebouncedPersist } from "./hooks/useDebouncedPersist";
+import { usePrefersReducedMotion } from "./hooks/usePrefersReducedMotion";
 import { angelAssets, getAngelSpeech } from "./services/angel";
 import { toDayKey } from "./services/dates";
 import { dreamImageDataUrl } from "./services/dreamImage";
@@ -70,6 +72,13 @@ export default function App() {
   const [moodEntry, setMoodEntry] = useState<MoodEntry | null>(() => loadMoodEntry(todayIso));
   const [speechLines, setSpeechLines] = useState<AngelSpeechLine[]>([]);
   const [liveData, setLiveData] = useState<LiveDayData | null>(null);
+
+  // Der Hook muss unbedingt aufgerufen werden - in einem `a || hook()` haette
+  // die Kurzschlussauswertung ihn uebersprungen, sobald der Schalter an ist.
+  const systemReducedMotion = usePrefersReducedMotion();
+  // Der Schalter in den Einstellungen kann Bewegung zusaetzlich abstellen,
+  // die Systemeinstellung aber nicht ueberstimmen: wer sie gesetzt hat, meint es.
+  const reduceMotion = settings.reduceMotion || systemReducedMotion;
 
   const selectedDate = useMemo(() => {
     const [year, month, day] = selectedIso.split("-").map(Number);
@@ -162,23 +171,24 @@ export default function App() {
   useEffect(() => {
     let cancelled = false;
     setLiveData(null);
-    loadLiveDayData(oracle).then((data) => {
+    loadLiveDayData(oracle, { pokemon: settings.showPokemon }).then((data) => {
       if (!cancelled) setLiveData(data);
     });
     return () => {
       cancelled = true;
     };
-  }, [oracle]);
+  }, [oracle, settings.showPokemon]);
 
   const dreamImage = useMemo(
-    () => dreamImageDataUrl(oracle.imageSeed, oracle.color.hex, settings.reduceMotion),
-    [oracle.imageSeed, oracle.color.hex, settings.reduceMotion]
+    () => dreamImageDataUrl(oracle.imageSeed, oracle.color.hex, reduceMotion),
+    [oracle.imageSeed, oracle.color.hex, reduceMotion]
   );
 
   useEffect(() => {
     let cancelled = false;
     getAngelSpeech(oracle, journalEntry, moodEntry, settings.providerMode, {
-      livePokemonName: liveData?.pokemon.status === "live" ? liveData.pokemon.name : undefined,
+      livePokemonName:
+        liveData?.pokemon?.status === "live" ? liveData.pokemon.name : undefined,
       angelName: angelAsset.name
     }).then((lines) => {
       if (!cancelled) setSpeechLines(lines);
@@ -218,7 +228,7 @@ export default function App() {
             lines={speechLines}
             muted={settings.angelMuted}
             pinned={settings.angelPinned}
-            reduceMotion={settings.reduceMotion}
+            reduceMotion={reduceMotion}
             onMutedChange={(angelMuted) => updateSettings({ ...settings, angelMuted })}
             onPinnedChange={(angelPinned) => updateSettings({ ...settings, angelPinned })}
           />
@@ -254,8 +264,10 @@ export default function App() {
       // Slim MMO-style buff bar ("Cogitator-Leiste") replacing the tall header:
       // date, day color chip, numbers triad, mood, angel and live diode at a glance.
       const weekday = selectedDate.toLocaleDateString("de-DE", { weekday: "long" });
+      // Der Pokemon-Block kann abgeschaltet sein; dann zaehlen nur die
+      // uebrigen Quellen fuer die Live-Diode.
       const liveStatus: "live" | "offline" | "loading" = liveData
-        ? [liveData.pokemon.status, liveData.wiki.status, liveData.numberFact.status].includes("live")
+        ? [liveData.pokemon?.status, liveData.wiki.status, liveData.numberFact.status].includes("live")
           ? "live"
           : "offline"
         : "loading";
@@ -263,7 +275,7 @@ export default function App() {
       return (
         <div
           className="soul-detail-screen"
-          data-reduce-motion={settings.reduceMotion ? "true" : undefined}
+          data-reduce-motion={reduceMotion ? "true" : undefined}
           style={{ "--day-accent": oracle.color.hex } as CSSProperties}
         >
           <header className="cogitator-bar" aria-label="Cogitator-Leiste">
@@ -329,7 +341,8 @@ export default function App() {
                 birthDate={settings.birthDate}
                 birthTime={settings.birthTime}
                 birthPlace={settings.birthPlace}
-                reduceMotion={settings.reduceMotion}
+                reduceMotion={reduceMotion}
+                showPokemon={settings.showPokemon}
                 onNameChange={(name) => updateSettings({ ...settings, name })}
                 onBirthDateChange={(birthDate) => updateSettings({ ...settings, birthDate })}
               />
@@ -338,7 +351,7 @@ export default function App() {
                 lines={speechLines}
                 muted={settings.angelMuted}
                 pinned={settings.angelPinned}
-                reduceMotion={settings.reduceMotion}
+                reduceMotion={reduceMotion}
                 onMutedChange={(angelMuted) => updateSettings({ ...settings, angelMuted })}
                 onPinnedChange={(angelPinned) => updateSettings({ ...settings, angelPinned })}
               />
@@ -394,7 +407,7 @@ export default function App() {
   // ersetzen - der Kalender schimmert durch und zeigt schon, worum es geht.
   if (!settings.onboarded) {
     return (
-      <div className="app-shell is-onboarding" data-reduce-motion={settings.reduceMotion ? "true" : undefined}>
+      <div className="app-shell is-onboarding" data-reduce-motion={reduceMotion ? "true" : undefined}>
         <div className="circuit-bg" aria-hidden="true" />
         <Onboarding
           settings={settings}
@@ -411,7 +424,7 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell" data-reduce-motion={settings.reduceMotion ? "true" : undefined}>
+    <div className="app-shell" data-reduce-motion={reduceMotion ? "true" : undefined}>
       <div className="circuit-bg" aria-hidden="true" />
       <aside className="sidebar">
         <div className="brand">
@@ -445,6 +458,7 @@ export default function App() {
       </aside>
 
       <main className="main-surface">
+        <UpdateNotice />
         <StorageNotice onExport={downloadBackup} />
         {renderMain()}
       </main>

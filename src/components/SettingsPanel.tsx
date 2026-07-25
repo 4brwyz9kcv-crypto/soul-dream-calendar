@@ -261,6 +261,51 @@ export function SettingsPanel({ settings, onSettingsChange, onProfileChange }: S
         {importStatus === "ok" && <p className="key-status is-ok">✓ Import erfolgreich — Daten übernommen.</p>}
         {importStatus === "fail" && <p className="key-status is-fail">✗ Import fehlgeschlagen — Datei ungültig.</p>}
       </article>
+
+      <article className="connect-panel privacy-panel">
+        <header>
+          <ShieldCheck size={20} aria-hidden="true" />
+          <div>
+            <h3>Datenschutz</h3>
+            <p>Was diese App speichert, sendet — und was nicht.</p>
+          </div>
+        </header>
+
+        <dl className="privacy-list">
+          <dt>Wo liegen deine Daten?</dt>
+          <dd>
+            Ausschließlich im Speicher dieses Browsers auf diesem Gerät. Es gibt keinen Server,
+            kein Konto und keine Synchronisierung. Löschst du die Browserdaten, sind sie weg —
+            deshalb der Export.
+          </dd>
+
+          <dt>Wer bekommt sie zu sehen?</dt>
+          <dd>
+            Niemand. Es gibt weder Analyse noch Tracking, weder Cookies noch Werbe-IDs, und keine
+            Fehlerberichte werden verschickt.
+          </dd>
+
+          <dt>Welche Server werden überhaupt kontaktiert?</dt>
+          <dd>
+            Nur für die Zusatzinhalte des Tages und nur mit dem <em>Datum</em> als Information:
+            Wikipedia, Numbers API{settings.showPokemon ? ", PokéAPI" : ""} sowie Open-Meteo beim
+            Suchen eines Geburtsorts. Deine Notizen sind dabei nie im Spiel. Ohne Netz
+            funktioniert die App vollständig weiter.
+          </dd>
+
+          <dt>Und OpenAI?</dt>
+          <dd>
+            Nur wenn du oben selbst einen Schlüssel hinterlegst. Dann geht das Tagesorakel
+            (Farbe, Zahlen, Stimmung) an api.openai.com — <strong>nicht</strong> dein Journal.
+            Ohne Schlüssel wird dorthin nichts gesendet.
+          </dd>
+        </dl>
+
+        <p className="privacy-note">
+          Rechtliches und die Lizenzen aller fremden Bestandteile stehen im Repository in
+          LICENSE und THIRD-PARTY-NOTICES.md.
+        </p>
+      </article>
     </section>
   );
 }

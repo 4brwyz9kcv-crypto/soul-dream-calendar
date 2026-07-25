@@ -139,9 +139,26 @@ describe("live data service", () => {
     });
 
     const data = await loadLiveDayData(oracle);
-    expect(data.pokemon.status).toBe("offline");
+    expect(data.pokemon?.status).toBe("offline");
     expect(data.wiki.status).toBe("offline");
     expect(data.numberFact.status).toBe("offline");
     expect(data.numberFact.number).toBe(dateDigitSum(oracle));
+  });
+
+  it("fragt die PokeAPI gar nicht erst an, wenn der Block abgeschaltet ist", async () => {
+    // Es soll nicht nur die Anzeige verschwinden - es darf auch keine Anfrage
+    // an Nintendo-nahe Server hinausgehen. Siehe THIRD-PARTY-NOTICES.md.
+    fetchMock.mockImplementation(() => {
+      throw new Error("kein Netz");
+    });
+
+    const data = await loadLiveDayData(oracle, { pokemon: false });
+    expect(data.pokemon).toBeNull();
+
+    const angefragt = fetchMock.mock.calls.map((call) => String(call[0]));
+    expect(angefragt.some((url) => url.includes("pokeapi"))).toBe(false);
+    // Die anderen Quellen laufen unveraendert weiter.
+    expect(data.wiki.status).toBe("offline");
+    expect(data.numberFact.status).toBe("offline");
   });
 });

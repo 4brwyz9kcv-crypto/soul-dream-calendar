@@ -12,7 +12,9 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "tauri": "tauri",
-    "assets:convert": "node scripts/convert-angels.mjs"
+    "assets:convert": "node scripts/convert-angels.mjs",
+    "assets:og": "node scripts/make-og-image.mjs",
+    "licenses": "node scripts/licenses.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",

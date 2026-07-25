@@ -1,0 +1,28 @@
+Copyright (c) 2026 Remy (4brwyz9kcv-crypto). Alle Rechte vorbehalten.
+
+Der Quellcode dieses Projekts ist einsehbar, aber nicht freigegeben. Ohne
+ausdrueckliche schriftliche Erlaubnis des Rechteinhabers ist es nicht
+gestattet, ihn zu vervielfaeltigen, zu veraendern, zu verbreiten, oeffentlich
+zugaenglich zu machen oder abgeleitete Werke davon zu erstellen.
+
+Erlaubt bleibt das Betrachten des Codes sowie ein lokaler Build zum eigenen,
+privaten Gebrauch.
+
+---
+
+Warum keine Open-Source-Lizenz:
+
+Ein oeffentliches Repository ohne Lizenzangabe bedeutet urheberrechtlich
+ohnehin "alle Rechte vorbehalten" - diese Datei sagt es nur ausdruecklich,
+damit sich niemand irrt.
+
+Eine permissive Lizenz wie MIT waere die uebliche Wahl, ist hier aber bewusst
+NICHT gesetzt: MIT laesst sich nicht zurueckziehen. Wer den Code einmal unter
+MIT bekommen hat, darf ihn dauerhaft weiterverwenden und auch verkaufen. Fuer
+ein Projekt, aus dem ein Produkt werden soll, ist das eine Einbahnstrasse.
+
+Umgekehrt gilt: von hier aus laesst sich jederzeit auf MIT, Apache-2.0 oder
+eine duale Lizenz wechseln. Diese Datei haelt die Option offen, sie ist keine
+endgueltige Entscheidung.
+
+Fremde Bestandteile und ihre eigenen Lizenzen: siehe THIRD-PARTY-NOTICES.md
