@@ -1,6 +1,6 @@
 export type ProviderMode = "local" | "openai";
 
-export type AppView = "calendar" | "oracle" | "journal" | "settings";
+export type AppView = "calendar" | "oracle" | "journal" | "review" | "settings";
 
 export type AngelMood = "oracle" | "coach" | "glitch";
 
@@ -17,8 +17,10 @@ export type SpeechSource =
 export interface AngelAsset {
   id: string;
   name: string;
-  fullSrc: string;
-  mobileSrc: string;
+  /** Animiertes WebP (~1,6 MB). Wird erst nach dem ersten Paint nachgeladen. */
+  animatedSrc: string;
+  /** Standbild (~80 KB). Sofort sichtbar, und die einzige Variante bei
+   *  reduzierter Bewegung. */
   posterSrc: string;
   mood: AngelMood;
 }
@@ -148,7 +150,8 @@ export interface LiveNumberFact {
 
 /** Aggregated async day data; every field degrades gracefully to offline. */
 export interface LiveDayData {
-  pokemon: LivePokemon;
+  /** null, wenn der Nutzer den Pokemon-Block abgeschaltet hat. */
+  pokemon: LivePokemon | null;
   wiki: LiveWikiFact;
   numberFact: LiveNumberFact;
 }
@@ -187,6 +190,23 @@ export interface BirthPlace {
   timezone: string;
 }
 
+/** Alles, was im aktiven Profil gespeichert ist - nach ISO-Tag geordnet. */
+export interface AllProfileData {
+  journal: Record<string, JournalEntry>;
+  moods: Record<string, MoodEntry>;
+  hours: Record<string, HourLog>;
+}
+
+/**
+ * Ein Profil auf diesem Geraet. Trennt Journal, Stimmungen, Stunden und
+ * Einstellungen mehrerer Menschen; der OpenAI-Schluessel bleibt geraeteweit.
+ */
+export interface Profile {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
 export interface UserSettings {
   name: string;
   providerMode: ProviderMode;
@@ -194,6 +214,19 @@ export interface UserSettings {
   angelPinned: boolean;
   reduceMotion: boolean;
   selectedAngelId: string;
+  /**
+   * Whether the "Pokemon des Tages" block is shown. The sprites come from
+   * PokeAPI and are Nintendo/Game Freak artwork — fine for a personal build,
+   * not something a commercial release should ship by default. The switch
+   * lets the same codebase serve both cases; everything else about the day
+   * (the deterministic seed included) is unaffected.
+   */
+  showPokemon: boolean;
+  /**
+   * Set once the user has been through the welcome flow. Absent/false means a
+   * fresh install, which opens onboarding instead of guessing a name.
+   */
+  onboarded: boolean;
   /**
    * Optional birth date as ISO "yyyy-mm-dd" (or absent/empty when unset).
    * Feeds the personal seed that makes every oracle unique per person and

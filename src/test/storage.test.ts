@@ -39,6 +39,7 @@ describe("storage service", () => {
 
   it("roundtrips settings through save and load", () => {
     const settings: UserSettings = {
+      ...defaultSettings,
       name: "Testname",
       providerMode: "openai",
       angelMuted: true,
@@ -48,6 +49,19 @@ describe("storage service", () => {
     };
     saveSettings(settings);
     expect(loadSettings()).toEqual(settings);
+  });
+
+  it("fills newly added settings fields from the defaults for older saves", () => {
+    // A profile written before showPokemon/onboarded existed must keep working
+    // instead of surfacing undefined into the UI.
+    localStorage.setItem(
+      "sdc.settings",
+      JSON.stringify({ name: "Altbestand", providerMode: "local", selectedAngelId: "spiral" })
+    );
+    const loaded = loadSettings();
+    expect(loaded.name).toBe("Altbestand");
+    expect(loaded.showPokemon).toBe(defaultSettings.showPokemon);
+    expect(loaded.onboarded).toBe(defaultSettings.onboarded);
   });
 
   it("roundtrips a journal entry and stamps a fresh updatedAt", () => {

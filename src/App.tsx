@@ -2,25 +2,36 @@ import {
   CalendarDays,
   CircleUserRound,
   CircuitBoard,
+  History,
   NotebookPen,
   Settings,
   Sparkles
 } from "lucide-react";
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { AngelCompanion } from "./components/AngelCompanion";
 import { CalendarGrid } from "./components/CalendarGrid";
 import { HourLogger } from "./components/HourLogger";
 import { JournalPanel } from "./components/JournalPanel";
+import { Onboarding } from "./components/Onboarding";
 import { OracleCards } from "./components/OracleCards";
+import { ReviewPanel } from "./components/ReviewPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
+import { ShareDayButton } from "./components/ShareDayButton";
 import { SoulDetail } from "./components/SoulDetail";
+import { StorageNotice } from "./components/StorageNotice";
+import { UpdateNotice } from "./components/UpdateNotice";
+import { useDebouncedPersist } from "./hooks/useDebouncedPersist";
+import { usePrefersReducedMotion } from "./hooks/usePrefersReducedMotion";
 import { angelAssets, getAngelSpeech } from "./services/angel";
 import { toDayKey } from "./services/dates";
 import { dreamImageDataUrl } from "./services/dreamImage";
 import { zodiacSign } from "./services/horoscope";
 import { loadLiveDayData } from "./services/live";
 import { getDayOracle } from "./services/oracle";
+import { onRouteChange, readRoute, writeRoute } from "./services/router";
 import {
+  exportAllData,
+  getActiveProfileId,
   loadJournalEntry,
   loadMoodEntry,
   loadSettings,
@@ -41,18 +52,33 @@ const navItems: Array<{ id: AppView; label: string; icon: typeof CalendarDays }>
   { id: "calendar", label: "Kalender", icon: CalendarDays },
   { id: "oracle", label: "Tagesorakel", icon: Sparkles },
   { id: "journal", label: "Notizen", icon: NotebookPen },
+  { id: "review", label: "Rueckblick", icon: History },
   { id: "settings", label: "Einstellungen", icon: Settings }
 ];
 
 export default function App() {
   const todayIso = toDayKey(new Date()).iso;
-  const [view, setView] = useState<AppView>("calendar");
-  const [selectedIso, setSelectedIso] = useState(todayIso);
+  // Ansicht und Tag kommen aus der Adresszeile, damit ein geteilter Link
+  // wirklich dort landet, wo der Absender war - und ein Neuladen nicht auf
+  // heute zurueckspringt.
+  const [view, setView] = useState<AppView>(() => readRoute(todayIso).view);
+  const [selectedIso, setSelectedIso] = useState(() => readRoute(todayIso).iso);
+  // Das aktive Profil bestimmt, welche Daten geladen werden. Es steckt in
+  // jedem Speicher-Schluessel unten, damit ein Profilwechsel Journal, Stimmung
+  // und Stundenlog genauso zuverlaessig neu laedt wie ein Tageswechsel.
+  const [profileId, setProfileId] = useState(getActiveProfileId);
   const [settings, setSettings] = useState<UserSettings>(() => loadSettings());
   const [journalEntry, setJournalEntry] = useState<JournalEntry>(() => loadJournalEntry(todayIso));
   const [moodEntry, setMoodEntry] = useState<MoodEntry | null>(() => loadMoodEntry(todayIso));
   const [speechLines, setSpeechLines] = useState<AngelSpeechLine[]>([]);
   const [liveData, setLiveData] = useState<LiveDayData | null>(null);
+
+  // Der Hook muss unbedingt aufgerufen werden - in einem `a || hook()` haette
+  // die Kurzschlussauswertung ihn uebersprungen, sobald der Schalter an ist.
+  const systemReducedMotion = usePrefersReducedMotion();
+  // Der Schalter in den Einstellungen kann Bewegung zusaetzlich abstellen,
+  // die Systemeinstellung aber nicht ueberstimmen: wer sie gesetzt hat, meint es.
+  const reduceMotion = settings.reduceMotion || systemReducedMotion;
 
   const selectedDate = useMemo(() => {
     const [year, month, day] = selectedIso.split("-").map(Number);
@@ -76,45 +102,93 @@ export default function App() {
     [oracle.angelAssetId, settings.selectedAngelId]
   );
 
-  useEffect(() => {
+  // Tageswechsel waehrend des Renderns nachziehen, nicht im Effect. Sonst
+  // rendert React einmal mit neuem Datum aber noch altem Eintrag, und der
+  // Speicher-Hook haelt den danach nachgereichten Eintrag faelschlich fuer
+  // eine Nutzereingabe - was jeden bloss angesehenen Tag angelegt haette.
+  const stateKey = `${profileId}:${selectedIso}`;
+  const [loadedKey, setLoadedKey] = useState(stateKey);
+  if (loadedKey !== stateKey) {
+    setLoadedKey(stateKey);
     setJournalEntry(loadJournalEntry(selectedIso));
     setMoodEntry(loadMoodEntry(selectedIso));
-  }, [selectedIso]);
+  }
 
-  useEffect(() => {
-    saveSettings(settings);
-  }, [settings]);
+  /** Nach Wechsel/Anlegen/Loeschen eines Profils den gesamten Zustand neu ziehen. */
+  const reloadProfile = () => {
+    const next = getActiveProfileId();
+    setProfileId(next);
+    setSettings(loadSettings());
+  };
 
+  // Zustand -> Adresszeile. Der allererste Abgleich ersetzt den History-Eintrag,
+  // damit "Zurueck" direkt nach dem Start nicht ins Leere zeigt; jeder weitere
+  // Tageswechsel legt einen echten Eintrag an.
+  const routeSynced = useRef(false);
   useEffect(() => {
-    saveJournalEntry(journalEntry);
-  }, [journalEntry]);
+    writeRoute({ view, iso: selectedIso }, !routeSynced.current);
+    routeSynced.current = true;
+  }, [view, selectedIso]);
 
-  useEffect(() => {
-    if (moodEntry) saveMoodEntry(moodEntry);
-  }, [moodEntry]);
+  // Adresszeile -> Zustand, wenn der Nutzer die Browser-Pfeile benutzt.
+  useEffect(
+    () =>
+      onRouteChange((route) => {
+        setView(route.view);
+        setSelectedIso(route.iso);
+      }),
+    []
+  );
+
+  // Alle drei liefen vorher ungebremst bei jeder Zustandsaenderung - also bei
+  // jedem einzelnen Tastendruck im Namensfeld und im Journal. Gebuendelt wird
+  // pro Tippgeraeusch nur noch einmal geschrieben, beim Tageswechsel und beim
+  // Schliessen des Tabs sofort (siehe useDebouncedPersist).
+  // Das Profil ist fest an die Schreibfunktion gebunden, nicht erst beim
+  // Ausfuehren nachgeschlagen - sonst landete ein Eintrag, der einen
+  // Profilwechsel um Millisekunden verpasst, im falschen Journal.
+  const persistSettings = useCallback(
+    (next: UserSettings) => saveSettings(next, profileId),
+    [profileId]
+  );
+  const persistJournal = useCallback(
+    (entry: JournalEntry) => saveJournalEntry(entry, profileId),
+    [profileId]
+  );
+  const persistMood = useCallback(
+    (entry: MoodEntry | null) => {
+      if (entry) saveMoodEntry(entry, profileId);
+    },
+    [profileId]
+  );
+
+  useDebouncedPersist(`settings:${profileId}`, settings, persistSettings);
+  useDebouncedPersist(stateKey, journalEntry, persistJournal);
+  useDebouncedPersist(stateKey, moodEntry, persistMood);
 
   // Live day data (PokeAPI, Wikipedia, Numbers API) — null while loading,
   // every field degrades to the deterministic offline fallback on its own.
   useEffect(() => {
     let cancelled = false;
     setLiveData(null);
-    loadLiveDayData(oracle).then((data) => {
+    loadLiveDayData(oracle, { pokemon: settings.showPokemon }).then((data) => {
       if (!cancelled) setLiveData(data);
     });
     return () => {
       cancelled = true;
     };
-  }, [oracle]);
+  }, [oracle, settings.showPokemon]);
 
   const dreamImage = useMemo(
-    () => dreamImageDataUrl(oracle.imageSeed, oracle.color.hex, settings.reduceMotion),
-    [oracle.imageSeed, oracle.color.hex, settings.reduceMotion]
+    () => dreamImageDataUrl(oracle.imageSeed, oracle.color.hex, reduceMotion),
+    [oracle.imageSeed, oracle.color.hex, reduceMotion]
   );
 
   useEffect(() => {
     let cancelled = false;
     getAngelSpeech(oracle, journalEntry, moodEntry, settings.providerMode, {
-      livePokemonName: liveData?.pokemon.status === "live" ? liveData.pokemon.name : undefined,
+      livePokemonName:
+        liveData?.pokemon?.status === "live" ? liveData.pokemon.name : undefined,
       angelName: angelAsset.name
     }).then((lines) => {
       if (!cancelled) setSpeechLines(lines);
@@ -126,6 +200,17 @@ export default function App() {
 
   const updateSettings = (next: UserSettings) => {
     setSettings(next);
+  };
+
+  /** Notfall-Export aus dem Speicherhinweis heraus (kein API-Key enthalten). */
+  const downloadBackup = () => {
+    const blob = new Blob([exportAllData()], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `soul-dream-calendar-${todayIso}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const renderMain = () => {
@@ -143,7 +228,7 @@ export default function App() {
             lines={speechLines}
             muted={settings.angelMuted}
             pinned={settings.angelPinned}
-            reduceMotion={settings.reduceMotion}
+            reduceMotion={reduceMotion}
             onMutedChange={(angelMuted) => updateSettings({ ...settings, angelMuted })}
             onPinnedChange={(angelPinned) => updateSettings({ ...settings, angelPinned })}
           />
@@ -151,16 +236,38 @@ export default function App() {
       );
     }
 
+    if (view === "review") {
+      return (
+        <ReviewPanel
+          profileId={profileId}
+          selectedIso={selectedIso}
+          profileName={settings.name}
+          onSelectDay={(iso) => {
+            setSelectedIso(iso);
+            setView("oracle");
+          }}
+        />
+      );
+    }
+
     if (view === "settings") {
-      return <SettingsPanel settings={settings} onSettingsChange={updateSettings} />;
+      return (
+        <SettingsPanel
+          settings={settings}
+          onSettingsChange={updateSettings}
+          onProfileChange={reloadProfile}
+        />
+      );
     }
 
     if (view === "oracle") {
       // Slim MMO-style buff bar ("Cogitator-Leiste") replacing the tall header:
       // date, day color chip, numbers triad, mood, angel and live diode at a glance.
       const weekday = selectedDate.toLocaleDateString("de-DE", { weekday: "long" });
+      // Der Pokemon-Block kann abgeschaltet sein; dann zaehlen nur die
+      // uebrigen Quellen fuer die Live-Diode.
       const liveStatus: "live" | "offline" | "loading" = liveData
-        ? [liveData.pokemon.status, liveData.wiki.status, liveData.numberFact.status].includes("live")
+        ? [liveData.pokemon?.status, liveData.wiki.status, liveData.numberFact.status].includes("live")
           ? "live"
           : "offline"
         : "loading";
@@ -168,7 +275,7 @@ export default function App() {
       return (
         <div
           className="soul-detail-screen"
-          data-reduce-motion={settings.reduceMotion ? "true" : undefined}
+          data-reduce-motion={reduceMotion ? "true" : undefined}
           style={{ "--day-accent": oracle.color.hex } as CSSProperties}
         >
           <header className="cogitator-bar" aria-label="Cogitator-Leiste">
@@ -209,14 +316,19 @@ export default function App() {
               <strong className="cog-value">{angelAsset.name}</strong>
             </div>
             <div className="cog-cell cog-cell--status">
-              <span className={`live-badge is-${liveStatus}`} title={liveLabel}>
+              <span className={`live-badge is-${liveStatus}`}>
                 <span className="led-dot" aria-hidden="true" />
+                <span className="visually-hidden">{liveLabel}</span>
               </span>
               <span className="cog-status-text">{liveLabel}</span>
+              <ShareDayButton
+                route={{ view, iso: selectedIso }}
+                title={`${weekday}, ${oracle.title}`}
+              />
             </div>
           </header>
           <div className="soul-detail-layout">
-            <HourLogger dayKey={selectedIso} isToday={selectedIso === todayIso} />
+            <HourLogger dayKey={selectedIso} isToday={selectedIso === todayIso} profileId={profileId} />
             <div className="soul-center">
               <OracleCards oracle={oracle} dreamImage={dreamImage} />
             </div>
@@ -229,7 +341,8 @@ export default function App() {
                 birthDate={settings.birthDate}
                 birthTime={settings.birthTime}
                 birthPlace={settings.birthPlace}
-                reduceMotion={settings.reduceMotion}
+                reduceMotion={reduceMotion}
+                showPokemon={settings.showPokemon}
                 onNameChange={(name) => updateSettings({ ...settings, name })}
                 onBirthDateChange={(birthDate) => updateSettings({ ...settings, birthDate })}
               />
@@ -238,7 +351,7 @@ export default function App() {
                 lines={speechLines}
                 muted={settings.angelMuted}
                 pinned={settings.angelPinned}
-                reduceMotion={settings.reduceMotion}
+                reduceMotion={reduceMotion}
                 onMutedChange={(angelMuted) => updateSettings({ ...settings, angelMuted })}
                 onPinnedChange={(angelPinned) => updateSettings({ ...settings, angelPinned })}
               />
@@ -290,8 +403,28 @@ export default function App() {
     );
   };
 
+  // Erster Start: der Willkommensdialog liegt ueber der App, statt sie zu
+  // ersetzen - der Kalender schimmert durch und zeigt schon, worum es geht.
+  if (!settings.onboarded) {
+    return (
+      <div className="app-shell is-onboarding" data-reduce-motion={reduceMotion ? "true" : undefined}>
+        <div className="circuit-bg" aria-hidden="true" />
+        <Onboarding
+          settings={settings}
+          onChange={setSettings}
+          onDone={(next) => {
+            setSettings(next);
+            // Sofort schreiben statt auf die Verzoegerung zu warten: schliesst
+            // der Nutzer den Tab direkt danach, darf der Dialog nicht wiederkommen.
+            saveSettings(next, profileId);
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className="app-shell" data-reduce-motion={settings.reduceMotion ? "true" : undefined}>
+    <div className="app-shell" data-reduce-motion={reduceMotion ? "true" : undefined}>
       <div className="circuit-bg" aria-hidden="true" />
       <aside className="sidebar">
         <div className="brand">
@@ -325,6 +458,8 @@ export default function App() {
       </aside>
 
       <main className="main-surface">
+        <UpdateNotice />
+        <StorageNotice onExport={downloadBackup} />
         {renderMain()}
       </main>
 

@@ -1,5 +1,6 @@
 import { AlarmClock, ChevronDown, Save } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useDebouncedPersist } from "../hooks/useDebouncedPersist";
 import { loadHourLog, saveHourLog } from "../services/storage";
 import type { HourLog } from "../types";
 
@@ -16,17 +17,30 @@ const allHours = Array.from({ length: 24 }, (_, hour) => hour);
 interface HourLoggerProps {
   dayKey: string;
   isToday: boolean;
+  /** Aktives Profil - Teil des Speicherschluessels und des Neulade-Signals. */
+  profileId: string;
 }
 
-export function HourLogger({ dayKey, isToday }: HourLoggerProps) {
+export function HourLogger({ dayKey, isToday, profileId }: HourLoggerProps) {
   const [hours, setHours] = useState<HourLog>(() => loadHourLog(dayKey));
   const [mobileOpen, setMobileOpen] = useState(false);
   const [currentHour, setCurrentHour] = useState(() => new Date().getHours());
   const bodyRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  // Tageswechsel waehrend des Renderns nachziehen (siehe App.tsx): so passen
+  // Tag und Inhalt schon zusammen, bevor der Speicher-Hook laeuft.
+  const stateKey = `${profileId}:${dayKey}`;
+  const [loadedKey, setLoadedKey] = useState(stateKey);
+  if (loadedKey !== stateKey) {
+    setLoadedKey(stateKey);
     setHours(loadHourLog(dayKey));
-  }, [dayKey]);
+  }
+
+  const persistHours = useCallback(
+    (next: HourLog) => saveHourLog(dayKey, next, profileId),
+    [dayKey, profileId]
+  );
+  useDebouncedPersist(stateKey, hours, persistHours);
 
   // Desktop console rail: center the current hour in the internal scroller on
   // mount / day switch (today only). Sets scrollTop directly instead of
@@ -47,12 +61,10 @@ export function HourLogger({ dayKey, isToday }: HourLoggerProps) {
     return () => window.clearInterval(timer);
   }, [isToday]);
 
+  // Reiner Zustandsuebergang - das Schreiben uebernimmt der Speicher-Hook.
+  // Vorher stand saveHourLog im Updater und lief unter StrictMode doppelt.
   const updateHour = (hour: number, value: string) => {
-    setHours((current) => {
-      const next = { ...current, [hour]: value };
-      saveHourLog(dayKey, next);
-      return next;
-    });
+    setHours((current) => ({ ...current, [hour]: value }));
   };
 
   const filledCount = allHours.filter((hour) => (hours[hour] ?? "").trim().length > 0).length;

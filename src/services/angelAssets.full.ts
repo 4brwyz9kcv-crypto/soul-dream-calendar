@@ -1,26 +1,39 @@
 import type { AngelAsset } from "../types";
 
-import seraphFull from "../assets/angels/full/seraph-eye-pcb-sigil.gif";
-import seraphMobile from "../assets/angels/mobile/seraph-eye-pcb-sigil.gif";
-import seraphPoster from "../assets/angels/poster/seraph-eye-pcb-sigil.png";
-import wingedFull from "../assets/angels/full/winged-eye-pcb.gif";
-import wingedMobile from "../assets/angels/mobile/winged-eye-pcb.gif";
-import wingedPoster from "../assets/angels/poster/winged-eye-pcb.png";
-import terminalFull from "../assets/angels/full/terminal-third-eye.gif";
-import terminalMobile from "../assets/angels/mobile/terminal-third-eye.gif";
-import terminalPoster from "../assets/angels/poster/terminal-third-eye.png";
-import spiralFull from "../assets/angels/full/spiral-eye-pcb-wings.gif";
-import spiralMobile from "../assets/angels/mobile/spiral-eye-pcb-wings.gif";
-import spiralPoster from "../assets/angels/poster/spiral-eye-pcb-wings.png";
+/**
+ * Die Engel-Grafiken fuer den regulaeren Build.
+ *
+ * Zwei Varianten pro Engel:
+ * - `posterSrc`: Standbild (~80 KB), wird sofort geladen und angezeigt.
+ * - `animatedSrc`: die Animation (~1,6 MB), wird erst nach dem ersten Paint
+ *   nachgeholt und dann eingeblendet - siehe AngelCompanion.
+ *
+ * Beide sind WebP. Dieselben Bilder wogen als GIF 2,5 MB bzw. 0,5 MB; GIF
+ * kennt nur 256 Farben und komprimiert Bewegtbild schlecht.
+ *
+ * Die 384-px-Originale in `../assets/angels/full/` (je ~16 MB) waren hier
+ * frueher mit eingebunden, wurden aber nirgends angezeigt - sie lagen bloss
+ * im Bundle. Sie bleiben als Quellmaterial im Repository und werden nicht
+ * mehr importiert.
+ */
+
+import seraphAnimated from "../assets/angels/mobile/seraph-eye-pcb-sigil.webp";
+import seraphPoster from "../assets/angels/poster/seraph-eye-pcb-sigil.webp";
+import wingedAnimated from "../assets/angels/mobile/winged-eye-pcb.webp";
+import wingedPoster from "../assets/angels/poster/winged-eye-pcb.webp";
+import terminalAnimated from "../assets/angels/mobile/terminal-third-eye.webp";
+import terminalPoster from "../assets/angels/poster/terminal-third-eye.webp";
+import spiralAnimated from "../assets/angels/mobile/spiral-eye-pcb-wings.webp";
+import spiralPoster from "../assets/angels/poster/spiral-eye-pcb-wings.webp";
 
 export type AngelSources = Record<
   "seraph" | "winged" | "terminal" | "spiral",
-  Pick<AngelAsset, "fullSrc" | "mobileSrc" | "posterSrc">
+  Pick<AngelAsset, "animatedSrc" | "posterSrc">
 >;
 
 export const angelSources: AngelSources = {
-  seraph: { fullSrc: seraphFull, mobileSrc: seraphMobile, posterSrc: seraphPoster },
-  winged: { fullSrc: wingedFull, mobileSrc: wingedMobile, posterSrc: wingedPoster },
-  terminal: { fullSrc: terminalFull, mobileSrc: terminalMobile, posterSrc: terminalPoster },
-  spiral: { fullSrc: spiralFull, mobileSrc: spiralMobile, posterSrc: spiralPoster }
+  seraph: { animatedSrc: seraphAnimated, posterSrc: seraphPoster },
+  winged: { animatedSrc: wingedAnimated, posterSrc: wingedPoster },
+  terminal: { animatedSrc: terminalAnimated, posterSrc: terminalPoster },
+  spiral: { animatedSrc: spiralAnimated, posterSrc: spiralPoster }
 };

@@ -1,16 +1,17 @@
-/* Compact single-file build: only the lightweight poster PNGs are bundled.
-   The animated GIF variants (up to ~17 MB each) would make the standalone
-   HTML unusable on phones, so every slot points at the poster. */
+/* Kompakter Einzeldatei-Build: nur die leichten Poster kommen mit hinein.
+   Die Animationen (~1,6 MB je Engel) stuenden als Base64 im HTML und machten
+   die Datei auf dem Handy unbrauchbar, also zeigen hier beide Varianten
+   dasselbe Standbild. */
 import type { AngelSources } from "./angelAssets.full";
 
-import seraphPoster from "../assets/angels/poster/seraph-eye-pcb-sigil.png";
-import wingedPoster from "../assets/angels/poster/winged-eye-pcb.png";
-import terminalPoster from "../assets/angels/poster/terminal-third-eye.png";
-import spiralPoster from "../assets/angels/poster/spiral-eye-pcb-wings.png";
+import seraphPoster from "../assets/angels/poster/seraph-eye-pcb-sigil.webp";
+import wingedPoster from "../assets/angels/poster/winged-eye-pcb.webp";
+import terminalPoster from "../assets/angels/poster/terminal-third-eye.webp";
+import spiralPoster from "../assets/angels/poster/spiral-eye-pcb-wings.webp";
 
 export const angelSources: AngelSources = {
-  seraph: { fullSrc: seraphPoster, mobileSrc: seraphPoster, posterSrc: seraphPoster },
-  winged: { fullSrc: wingedPoster, mobileSrc: wingedPoster, posterSrc: wingedPoster },
-  terminal: { fullSrc: terminalPoster, mobileSrc: terminalPoster, posterSrc: terminalPoster },
-  spiral: { fullSrc: spiralPoster, mobileSrc: spiralPoster, posterSrc: spiralPoster }
+  seraph: { animatedSrc: seraphPoster, posterSrc: seraphPoster },
+  winged: { animatedSrc: wingedPoster, posterSrc: wingedPoster },
+  terminal: { animatedSrc: terminalPoster, posterSrc: terminalPoster },
+  spiral: { animatedSrc: spiralPoster, posterSrc: spiralPoster }
 };

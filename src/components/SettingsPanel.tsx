@@ -1,19 +1,19 @@
 import {
   Download,
+  Gamepad2,
   KeyRound,
-  MapPin,
   Moon,
   ShieldCheck,
   SlidersHorizontal,
   Trash2,
-  Upload,
-  X
+  Upload
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { ChangeEvent } from "react";
-import type { LiveStatus, UserSettings } from "../types";
+import type { UserSettings } from "../types";
+import { PlacePicker } from "./PlacePicker";
+import { ProfileSwitcher } from "./ProfileSwitcher";
 import { angelAssets } from "../services/angel";
-import { searchPlaces, type GeoPlace } from "../services/geo";
 import { testOpenAiKey } from "../services/openai";
 import {
   clearOpenAiKey,
@@ -27,66 +27,19 @@ import {
 interface SettingsPanelProps {
   settings: UserSettings;
   onSettingsChange: (settings: UserSettings) => void;
+  /** Wechsel/Anlegen/Loeschen eines Profils laedt den gesamten Zustand neu. */
+  onProfileChange: () => void;
 }
 
 type KeyStatus = "idle" | "testing" | "ok" | "fail";
 type ImportStatus = "idle" | "ok" | "fail";
-type GeoUiStatus = "idle" | "searching" | LiveStatus;
 
-const GEO_DEBOUNCE_MS = 400;
-
-export function SettingsPanel({ settings, onSettingsChange }: SettingsPanelProps) {
+export function SettingsPanel({ settings, onSettingsChange, onProfileChange }: SettingsPanelProps) {
   const [keyInput, setKeyInput] = useState("");
   const [keyStatus, setKeyStatus] = useState<KeyStatus>("idle");
   const [hasKey, setHasKey] = useState(() => getOpenAiKey() !== null);
   const [importStatus, setImportStatus] = useState<ImportStatus>("idle");
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Geburtsort search: debounced Open-Meteo suggestions with offline fallback.
-  const [placeQuery, setPlaceQuery] = useState("");
-  const [placeSuggestions, setPlaceSuggestions] = useState<GeoPlace[]>([]);
-  const [geoStatus, setGeoStatus] = useState<GeoUiStatus>("idle");
-  // Source of the picked place (live API vs. built-in list) for the LED;
-  // session-local — after a reload the stored place simply shows its data.
-  const [placeSource, setPlaceSource] = useState<LiveStatus | null>(null);
-
-  useEffect(() => {
-    const query = placeQuery.trim();
-    if (query.length < 2) {
-      setPlaceSuggestions([]);
-      setGeoStatus("idle");
-      return;
-    }
-    let cancelled = false;
-    setGeoStatus("searching");
-    const timer = setTimeout(() => {
-      searchPlaces(query).then((result) => {
-        if (cancelled) return;
-        setPlaceSuggestions(result.places);
-        setGeoStatus(result.status);
-      });
-    }, GEO_DEBOUNCE_MS);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [placeQuery]);
-
-  const pickPlace = (place: GeoPlace) => {
-    setPlaceSource(geoStatus === "live" ? "live" : "offline");
-    setPlaceQuery("");
-    setPlaceSuggestions([]);
-    setGeoStatus("idle");
-    onSettingsChange({
-      ...settings,
-      birthPlace: { name: place.name, lat: place.lat, lon: place.lon, timezone: place.timezone }
-    });
-  };
-
-  const clearPlace = () => {
-    setPlaceSource(null);
-    onSettingsChange({ ...settings, birthPlace: undefined });
-  };
 
   const connectKey = async () => {
     if (!keyInput.trim() || keyStatus === "testing") return;
@@ -180,80 +133,10 @@ export function SettingsPanel({ settings, onSettingsChange }: SettingsPanelProps
 
         <div className="setting-card geo-card">
           <span>Geburtsort</span>
-          {settings.birthPlace ? (
-            <div className="geo-resolved">
-              <MapPin size={14} aria-hidden="true" />
-              <div className="geo-resolved-meta">
-                <strong>{settings.birthPlace.name}</strong>
-                <small>
-                  {settings.birthPlace.lat.toFixed(2)}° / {settings.birthPlace.lon.toFixed(2)}° ·{" "}
-                  {settings.birthPlace.timezone}
-                </small>
-              </div>
-              {placeSource && (
-                <span className={`live-badge is-${placeSource}`} title={placeSource === "live" ? "Live-Quelle" : "Offline-Quelle"}>
-                  <span className="led-dot" aria-hidden="true" />
-                  <span className="visually-hidden">
-                    {placeSource === "live" ? "Live-Quelle" : "Offline-Quelle"}
-                  </span>
-                </span>
-              )}
-              <button
-                type="button"
-                className="geo-clear"
-                onClick={clearPlace}
-                title="Geburtsort entfernen"
-                aria-label="Geburtsort entfernen"
-              >
-                <X size={14} aria-hidden="true" />
-              </button>
-            </div>
-          ) : (
-            <div className="geo-search">
-              <input
-                value={placeQuery}
-                onChange={(event) => setPlaceQuery(event.target.value)}
-                placeholder="Stadt suchen, z. B. Wien"
-                autoComplete="off"
-                aria-label="Geburtsort suchen"
-                aria-expanded={placeSuggestions.length > 0}
-                aria-controls="geo-suggest-list"
-              />
-              {geoStatus !== "idle" && (
-                <span
-                  className={`live-badge is-${geoStatus === "searching" ? "loading" : geoStatus}`}
-                  title={
-                    geoStatus === "searching"
-                      ? "Suche läuft…"
-                      : geoStatus === "live"
-                        ? "Live-Quelle (Open-Meteo)"
-                        : "Offline-Quelle (eingebaute Liste)"
-                  }
-                >
-                  <span className="led-dot" aria-hidden="true" />
-                  <span className="visually-hidden">
-                    {geoStatus === "searching" ? "Suche läuft" : geoStatus === "live" ? "Live" : "Offline"}
-                  </span>
-                </span>
-              )}
-              {placeSuggestions.length > 0 && (
-                <ul className="geo-suggest" id="geo-suggest-list">
-                  {placeSuggestions.map((place) => (
-                    <li key={`${place.name}:${place.lat}:${place.lon}`}>
-                      <button type="button" onClick={() => pickPlace(place)}>
-                        <MapPin size={13} aria-hidden="true" />
-                        <span className="geo-suggest-label">{place.label}</span>
-                        <small>{place.timezone}</small>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {geoStatus === "offline" && placeSuggestions.length === 0 && (
-                <small className="setting-hint">Keine Stadt gefunden — anders schreiben?</small>
-              )}
-            </div>
-          )}
+          <PlacePicker
+            value={settings.birthPlace}
+            onChange={(birthPlace) => onSettingsChange({ ...settings, birthPlace })}
+          />
           <small className="setting-hint">
             Aszendent und Mondzeichen brauchen Geburtszeit und Geburtsort — erst dann kann der
             Cogitator den Himmel deiner Geburtsminute berechnen.
@@ -287,7 +170,22 @@ export function SettingsPanel({ settings, onSettingsChange }: SettingsPanelProps
           />
           <span><ShieldCheck size={16} /> Engel anheften</span>
         </label>
+
+        <label className="toggle-card">
+          <input
+            type="checkbox"
+            checked={settings.showPokemon}
+            onChange={(event) => onSettingsChange({ ...settings, showPokemon: event.target.checked })}
+          />
+          <span><Gamepad2 size={16} /> Pokémon des Tages zeigen</span>
+          <small className="setting-hint">
+            Die Sprites stammen aus der PokeAPI und sind Material von Nintendo/Game Freak. Fuer den
+            privaten Gebrauch unproblematisch — vor einer kommerziellen Veroeffentlichung besser aus.
+          </small>
+        </label>
       </div>
+
+      <ProfileSwitcher onProfileChange={onProfileChange} />
 
       <article className="connect-panel">
         <header>
@@ -362,6 +260,51 @@ export function SettingsPanel({ settings, onSettingsChange }: SettingsPanelProps
         </div>
         {importStatus === "ok" && <p className="key-status is-ok">✓ Import erfolgreich — Daten übernommen.</p>}
         {importStatus === "fail" && <p className="key-status is-fail">✗ Import fehlgeschlagen — Datei ungültig.</p>}
+      </article>
+
+      <article className="connect-panel privacy-panel">
+        <header>
+          <ShieldCheck size={20} aria-hidden="true" />
+          <div>
+            <h3>Datenschutz</h3>
+            <p>Was diese App speichert, sendet — und was nicht.</p>
+          </div>
+        </header>
+
+        <dl className="privacy-list">
+          <dt>Wo liegen deine Daten?</dt>
+          <dd>
+            Ausschließlich im Speicher dieses Browsers auf diesem Gerät. Es gibt keinen Server,
+            kein Konto und keine Synchronisierung. Löschst du die Browserdaten, sind sie weg —
+            deshalb der Export.
+          </dd>
+
+          <dt>Wer bekommt sie zu sehen?</dt>
+          <dd>
+            Niemand. Es gibt weder Analyse noch Tracking, weder Cookies noch Werbe-IDs, und keine
+            Fehlerberichte werden verschickt.
+          </dd>
+
+          <dt>Welche Server werden überhaupt kontaktiert?</dt>
+          <dd>
+            Nur für die Zusatzinhalte des Tages und nur mit dem <em>Datum</em> als Information:
+            Wikipedia, Numbers API{settings.showPokemon ? ", PokéAPI" : ""} sowie Open-Meteo beim
+            Suchen eines Geburtsorts. Deine Notizen sind dabei nie im Spiel. Ohne Netz
+            funktioniert die App vollständig weiter.
+          </dd>
+
+          <dt>Und OpenAI?</dt>
+          <dd>
+            Nur wenn du oben selbst einen Schlüssel hinterlegst. Dann geht das Tagesorakel
+            (Farbe, Zahlen, Stimmung) an api.openai.com — <strong>nicht</strong> dein Journal.
+            Ohne Schlüssel wird dorthin nichts gesendet.
+          </dd>
+        </dl>
+
+        <p className="privacy-note">
+          Rechtliches und die Lizenzen aller fremden Bestandteile stehen im Repository in
+          LICENSE und THIRD-PARTY-NOTICES.md.
+        </p>
       </article>
     </section>
   );

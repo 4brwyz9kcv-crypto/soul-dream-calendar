@@ -1,0 +1,58 @@
+name: CI
+
+# Jeder Pull Request gegen main und jeder Push auf main/claude-Branches wird
+# geprueft. Bisher gab es gar keine Pruefung - ob der Build durchlaeuft, zeigte
+# sich fruehestens beim Deploy von Hand.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, "claude/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # Ein neuer Push auf denselben Branch macht den laufenden Durchlauf hinfaellig.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Die Engel-Assets liegen in Git LFS. Ohne dieses Flag checkt die
+          # Action nur die Zeiger-Textdateien aus, und der Build erzeugt
+          # kaputte Bilder, ohne zu scheitern.
+          lfs: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typen pruefen
+        run: npm run typecheck
+
+      - name: Tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Groesse der Auslieferung melden
+        # Der Ausgangszustand lag bei 149 MB, weil nie angezeigte Assets
+        # mitgebuendelt wurden. Diese Zeile macht so etwas im Log sichtbar,
+        # bevor es wieder jemandem entgeht.
+        run: |
+          echo "### Build" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          du -sh dist >> "$GITHUB_STEP_SUMMARY"
+          find dist -type f -printf '%s\t%p\n' | sort -rn | head -12 \
+            | awk -F'\t' '{printf "%8.1f KB  %s\n", $1/1024, $2}' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"

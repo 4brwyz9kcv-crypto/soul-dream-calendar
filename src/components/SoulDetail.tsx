@@ -63,6 +63,9 @@ interface SoulDetailProps {
   birthTime?: string;
   birthPlace?: BirthPlace;
   reduceMotion: boolean;
+  /** Aus: der Pokemon-Block entfaellt, und die PokeAPI wird gar nicht erst
+   *  angefragt (siehe THIRD-PARTY-NOTICES.md). */
+  showPokemon: boolean;
   onNameChange: (name: string) => void;
   onBirthDateChange: (birthDate: string) => void;
 }
@@ -137,6 +140,7 @@ export function SoulDetail({
   birthTime,
   birthPlace,
   reduceMotion,
+  showPokemon,
   onNameChange,
   onBirthDateChange
 }: SoulDetailProps) {
@@ -278,7 +282,8 @@ export function SoulDetail({
         id="soul-panel-orakel"
         aria-labelledby="soul-tab-orakel"
       >
-        {/* 1 · Pokemon des Tages */}
+        {/* 1 · Pokemon des Tages — entfaellt vollstaendig, wenn abgeschaltet */}
+        {showPokemon && (
         <article className="trace-row" aria-busy={!pokemon}>
           <header>
             <Zap size={15} aria-hidden="true" /> Pokemon des Tages
@@ -320,14 +325,21 @@ export function SoulDetail({
             <SkeletonLines widths={[68, 42]} />
           )}
         </article>
+        )}
 
-        {/* 2 · Erde–Sonne in Pokemon-Längen */}
-        <article className="trace-row" aria-busy={!pokemon}>
+        {/* 2 · Erde–Sonne, gemessen in Pokemon-Längen — ohne Pokemon in km */}
+        <article className="trace-row" aria-busy={showPokemon && !pokemon}>
           <header>
             <Ruler size={15} aria-hidden="true" /> Abstand zur Sonne
-            <LiveBadge status={pokemonStatus} />
+            {showPokemon && <LiveBadge status={pokemonStatus} />}
           </header>
-          {pokemon && pokemonUnits != null ? (
+          {!showPokemon ? (
+            <p className="trace-sentence">
+              An dem Tag ist die Erde etwa{" "}
+              <strong>{deNumber.format(Math.round(oracle.astro.sunDistanceKm))}</strong> km von der
+              Sonne entfernt.
+            </p>
+          ) : pokemon && pokemonUnits != null ? (
             <p className="trace-sentence">
               An dem Tag ist die Erde etwa <strong>{deNumber.format(pokemonUnits)}</strong> {pokemon.name}{" "}
               von der Sonne entfernt.

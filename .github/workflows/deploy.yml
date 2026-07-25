@@ -1,0 +1,70 @@
+name: Deploy nach gh-pages
+
+# Bewusst NUR von Hand ausloesbar.
+#
+# Die Live-Seite haengt am Branch gh-pages (Pages-Quelle "legacy"), und diese
+# Einstellung bleibt unangetastet - der Workflow schreibt genau das, was
+# bisher von Hand dorthin geschoben wurde.
+#
+# Kein automatischer Deploy bei jedem Push auf main: wann die oeffentliche
+# Seite sich aendert, soll eine Entscheidung bleiben, keine Nebenwirkung.
+# Wer das umstellen will, haengt hier einen `push:`-Ausloeser an.
+on:
+  workflow_dispatch:
+    inputs:
+      grund:
+        description: "Was wird ausgeliefert? (erscheint in der Commit-Nachricht)"
+        required: false
+        default: "Manueller Deploy"
+
+permissions:
+  contents: write
+
+concurrency:
+  # Zwei gleichzeitige Deploys auf denselben Branch enden sonst in einem
+  # abgelehnten Push oder, schlimmer, in halb ausgeliefertem Stand.
+  group: deploy-gh-pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Nicht ausliefern, was nicht durchlaeuft.
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+      - name: Auf gh-pages veroeffentlichen
+        env:
+          GRUND: ${{ inputs.grund }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          cd dist
+          # .nojekyll: ohne diese Datei verschluckt GitHub Pages alle Ordner,
+          # die mit einem Unterstrich beginnen.
+          touch .nojekyll
+          git init -q -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Deploy: ${GRUND} (${SHA::7})"
+          # Force-Push ist hier richtig: gh-pages traegt keine Historie, die
+          # jemand braucht - es ist ein Abbild des jeweils aktuellen Builds.
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" gh-pages
+
+      - name: Adresse melden
+        run: |
+          echo "Live: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/" >> "$GITHUB_STEP_SUMMARY"

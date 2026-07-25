@@ -280,13 +280,28 @@ export async function fetchNumberFact(oracle: DayOracle): Promise<LiveNumberFact
 /* Aggregate                                                           */
 /* ------------------------------------------------------------------ */
 
+/** Was geladen werden soll. Fehlt die Angabe, wird alles geladen. */
+export interface LiveOptions {
+  /**
+   * Pokemon des Tages abrufen. Bei `false` unterbleibt der Aufruf an die
+   * PokeAPI vollstaendig - es geht also auch keine Anfrage an Nintendo-nahe
+   * Server heraus, nicht nur die Anzeige verschwindet. Siehe
+   * THIRD-PARTY-NOTICES.md.
+   */
+  pokemon?: boolean;
+}
+
 /**
  * Loads all three live sources in parallel. Individual failures degrade to
  * their offline fallback; this function itself never rejects.
  */
-export async function loadLiveDayData(oracle: DayOracle): Promise<LiveDayData> {
+export async function loadLiveDayData(
+  oracle: DayOracle,
+  options: LiveOptions = {}
+): Promise<LiveDayData> {
+  const wantPokemon = options.pokemon !== false;
   const [pokemon, wiki, numberFact] = await Promise.all([
-    fetchPokemonOfDay(oracle),
+    wantPokemon ? fetchPokemonOfDay(oracle) : Promise.resolve(null),
     fetchWikiOnThisDay(oracle),
     fetchNumberFact(oracle)
   ]);
